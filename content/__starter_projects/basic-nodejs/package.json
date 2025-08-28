@@ -1,0 +1,15 @@
+{
+  "name": "you-should-probably-change-this",
+  "version": "0.0.0",
+  "type": "module",
+  "description": "A starter project for running an express server using Node.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "author": "You?",
+  "license": "PD",
+  "dependencies": {
+    "express": "^5.1.0",
+    "nunjucks": "^3.2.4"
+  }
+}

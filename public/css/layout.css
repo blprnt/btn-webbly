@@ -1,0 +1,75 @@
+main {
+  --status-height: 2em;
+  --div-width: 1em;
+  display: grid;
+  grid-template-columns: min-content min-content 1fr;
+  grid-template-rows: min-content 1fr var(--status-height);
+  gap: 0;
+  grid-column-gap: 3px;
+  grid-template-areas:
+    "buttons   tabnav   preview"
+    "filetree  editors  preview"
+    "status    status   status";
+}
+
+#tabnav {
+  grid-area: tabnav;
+  display: grid;
+  grid-template-columns: 2em 1fr 2em;
+  grid-template-rows: 100%;
+  grid-template-areas: "left tabs right";
+}
+
+#buttons {
+  grid-area: buttons;
+  margin: 0;
+  padding: 0;
+}
+
+#filetree {
+  grid-area: filetree;
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  resize: horizontal;
+}
+
+#status {
+  grid-area: status;
+  margin: 0;
+  padding: 0;
+}
+
+#left {
+  grid-area: left;
+  margin: 0;
+  padding: 0;
+}
+
+#tabs {
+  grid-area: tabs;
+  margin: 0;
+  padding: 0;
+}
+
+#right {
+  grid-area: right;
+  margin: 0;
+  padding: 0;
+}
+
+#editors {
+  display: flex;
+  grid-area: editors;
+  width: 46em;
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  resize: horizontal;
+}
+
+#preview {
+  grid-area: preview;
+  margin: 0;
+  padding: 0;
+}

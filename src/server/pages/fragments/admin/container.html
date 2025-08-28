@@ -1,0 +1,24 @@
+<tr>
+  <td>{{ container.id | shorthash }}</td>
+  <td>
+    {% if container.image | dockerimg != "(hash only)" %}
+    <a href="https://{{ container.image }}.{{ WEB_EDITOR_APPS_HOSTNAME }}" target="_blank">{{ container.image }}</a>
+    {% else %}
+    {{ container.image | dockerimg }}
+    {% endif %}
+  </td>
+  <td>{{ container.state }}</td>
+  <td>{{ container.status }}</td>
+  <td>{{ container.size }}</td>
+  <td>
+    {% if container.state == "Exited" %}
+    <form action="/v1/admin/container/remove/{{ container.id }}" method="post">
+      <button>remove</button>
+    </form>
+    {% else %}
+    <form action="/v1/admin/container/stop/{{ container.image }}" method="post">
+      <button>stop</button>
+    </form>
+    {% endif %}
+  </td>
+</tr>
