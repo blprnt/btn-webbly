@@ -165,4 +165,6 @@ Give [the deployment doc](./docs/deploying.md) a read-through. There's a bit mor
 
 I know. [Get in touch](https://github.com/Pomax/make-webbly-things/issues). We can do more.
 
+There's some minor [dev documentation](./docs/development.md) but the best place to start is probably to file an issue or discussion thread about the thing you're thinking of (don't work on a PR in silence without first filing an issue or discussion thread: the odds that whatever you made won't even be compatible with the platform anymore during the early days of development)
+
 - [Pomax](https://mastodon.social/deck/@TheRealPomax)
