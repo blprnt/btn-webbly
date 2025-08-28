@@ -157,6 +157,10 @@ And as an admin you can:
   - see a list of and stop running, or delete expired containers
 - Load up suspended projects in the editor (without running the project container)
 
+## What if I want to deploy my own instance?
+
+Give [the deployment doc](./docs/deploying.md) a read-through. There's a bit more information than in this README.md, but all of it will be important to have gone through if you want to set up your own instance.
+
 ## I want more <sup>and</sup>⧸<sub>or</sub> I have ideas
 
 I know. [Get in touch](https://github.com/Pomax/make-webbly-things/issues). We can do more.
