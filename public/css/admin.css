@@ -1,5 +1,12 @@
 html {
   body {
+    footer {
+      margin-top: 2em;
+      margin-bottom: calc(-0.5em + 1px);
+      text-align: center;
+      font-size: 1em;
+    }
+
     fieldset {
       display: inline-block;
       border: none;

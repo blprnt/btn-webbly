@@ -19,13 +19,14 @@ html {
 
     overflow: auto !important;
     padding: 1em;
-    padding-bottom: 2em;
+    padding-bottom: 0;
 
     font-family: Verdana;
     font-size: 14px;
 
     h1,
-    h2 {
+    h2,
+    footer {
       font-size: 2em;
       background: white;
       color: #333;
@@ -41,6 +42,13 @@ html {
 
     h2 {
       margin-top: 1.5em;
+    }
+
+    footer {
+      margin-top: 2em;
+      margin-bottom: calc(-0.5em + 1px);
+      text-align: center;
+      font-size: 1em;
     }
 
     ul {
