@@ -31003,14 +31003,14 @@ function addFileTreeHandling() {
   }
   fileTree2.addEventListener(`file:move`, async (evt) => {
     const { oldPath, newPath, grant } = evt.detail;
-    const response = await API.rename(projectName3, oldPath, newPath);
+    const response = await API.files.rename(projectName3, oldPath, newPath);
     if (response instanceof Error) return;
     if (response.status === 200) {
       const fileEntry = grant();
-      let key = oldPath.replace(contentDir, ``);
+      let key = oldPath.replace(projectName3, ``);
       const entry = fileEntry.state;
       if (entry) {
-        const newKey = newPath.replace(contentDir, ``);
+        const newKey = newPath.replace(projectName3, ``);
         updateEditorBindings(fileEntry, entry, newKey, key);
       }
     } else {

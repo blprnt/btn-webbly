@@ -177,10 +177,10 @@ function addFileTreeHandling() {
     if (response instanceof Error) return;
     if (response.status === 200) {
       const fileEntry = grant();
-      let key = oldPath.replace(contentDir, ``);
+      let key = oldPath.replace(projectName, ``);
       const entry = fileEntry.state;
       if (entry) {
-        const newKey = newPath.replace(contentDir, ``);
+        const newKey = newPath.replace(projectName, ``);
         updateEditorBindings(fileEntry, entry, newKey, key);
       }
     } else {
