@@ -6,7 +6,7 @@ Like over on https://make.webblythings.com! (just remember to read that wall of 
 
 <img width="100%" style="border: 1px solid black" src="public/screenshot.png">
 
-This is an attempt at implementing a friendly browser-based web content editing platform, using [codemirror 6](https://codemirror.net), a [custom-file-tree](https://github.com/pomax/custom-file-tree) as file tree component (as codemirror itself only models single editing panels), and a sprinkling of docker for runtime isolation and a reverse proxy because we like opening https URLs, and we don't like having to remember port numbers.
+This is an attempt at implementing a friendly browser-based web content editing platform, using [codemirror 6](https://codemirror.net), [&lt;file-tree&gt;](https://github.com/pomax/custom-file-tree) as file tree component (as codemirror itself only models single editing panels), and a sprinkling of docker for runtime isolation and a reverse proxy because we like opening https URLs, and we don't like having to remember port numbers.
 
 ## How do I use this?
 
