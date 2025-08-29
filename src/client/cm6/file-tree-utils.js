@@ -173,7 +173,7 @@ function addFileTreeHandling() {
 
   fileTree.addEventListener(`file:move`, async (evt) => {
     const { oldPath, newPath, grant } = evt.detail;
-    const response = await API.rename(projectName, oldPath, newPath);
+    const response = await API.files.rename(projectName, oldPath, newPath);
     if (response instanceof Error) return;
     if (response.status === 200) {
       const fileEntry = grant();
