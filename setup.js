@@ -205,6 +205,7 @@ function checkForSqlite(missing) {
  */
 async function setupEnv() {
   let {
+    LOCAL_DEV_TESTING,
     WEB_EDITOR_HOSTNAME,
     WEB_EDITOR_APPS_HOSTNAME,
     WEB_EDITOR_IMAGE_NAME,
@@ -308,7 +309,7 @@ This will require knowing your DNS provider and your API key for that provider.
   // (Re)generate the .env file
   writeFileSync(
     join(moduleDir, `.env`),
-    `LOCAL_DEV_TESTING=true
+    `LOCAL_DEV_TESTING=${LOCAL_DEV_TESTING || `true`}
 WEB_EDITOR_HOSTNAME="${WEB_EDITOR_HOSTNAME}"
 WEB_EDITOR_APPS_HOSTNAME="${WEB_EDITOR_APPS_HOSTNAME}"
 WEB_EDITOR_APP_SECRET="${WEB_EDITOR_APP_SECRET}"
@@ -327,6 +328,7 @@ TLS_DNS_API_KEY="${TLS_DNS_API_KEY}"
   // And make sure to update process.env because subsequent
   // functions rely on having these variables set:
   Object.assign(process.env, {
+    LOCAL_DEV_TESTING,
     WEB_EDITOR_HOSTNAME,
     WEB_EDITOR_APPS_HOSTNAME,
     WEB_EDITOR_APP_SECRET,
