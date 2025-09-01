@@ -413,7 +413,7 @@ async function setupSqlite() {
     parseFloat(v.match(/\d+/)[0])
   );
   const last = migrations.at(-1);
-  for (; version <= last; version++) {
+  for (version = 1; version <= last; version++) {
     const migration = `${version}`.padStart(4, `0`);
     execSync(`sqlite3 ${dbPath} ".read ./data/migrations/${migration}.sql"`);
   }
