@@ -5,6 +5,8 @@ import { join } from "node:path";
 const caddyFile = join(import.meta.dirname, `Caddyfile`);
 const defaultCaddyFile = join(import.meta.dirname, `Caddyfile.default`);
 
+export const portBindings = {};
+
 /**
  * Create (or reset) our Caddyfile
  */
@@ -98,12 +100,17 @@ ${host} {
 `;
 
     writeFileSync(caddyFile, data + entry);
+
+    portBindings[name] ??= {};
+    portBindings[name].port = port;
   }
 
   spawn(`caddy`, [`reload`, `--config`, caddyFile], {
     shell: true,
     stdio: `ignore`,
   });
+
+  return portBindings[name];
 }
 
 /**
@@ -119,4 +126,5 @@ export function removeCaddyEntry(name, env = process.env) {
     shell: true,
     // stdio: `inherit`,
   });
+  delete portBindings[name];
 }

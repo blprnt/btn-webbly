@@ -29,6 +29,8 @@ import {
   renameContainer,
   restartContainer as restartDockerContainer,
   runContainer,
+  runStaticSite,
+  stopStaticServer,
 } from "../../../docker/docker-helpers.js";
 
 import {
@@ -47,14 +49,30 @@ import {
   updateSettingsForProject,
 } from "../../../database/index.js";
 
-import { removeCaddyEntry } from "../../../caddy/caddy.js";
+import { portBindings, removeCaddyEntry } from "../../../caddy/caddy.js";
+import {
+  dockerDueToEdit,
+  getTimingDiffInMinutes,
+} from "../../../docker/sleep-check.js";
+import { runProject } from "../../../database/project.js";
 
 /**
  * ...docs go here...
  */
-export function checkContainerHealth(req, res, next) {
-  const projectName = res.locals.lookups.project.name;
-  res.locals.healthStatus = dockerHealthCheck(projectName);
+export async function checkProjectHealth(req, res, next) {
+  const { project } = res.locals.lookups;
+  const settings = loadSettingsForProject(project.id);
+  if (settings.app_type === `static`) {
+    try {
+      const { port } = portBindings[project.name];
+      await fetch(`http://localhost:${port}`);
+      res.locals.healthStatus = `ready`;
+    } catch (e) {
+      res.locals.healthStatus = `failed`;
+    }
+  } else {
+    res.locals.healthStatus = dockerHealthCheck(project.name);
+  }
   next();
 }
 
@@ -185,7 +203,7 @@ export async function loadProject(req, res, next) {
 
   if (projectSuspendedThroughOwner(projectName)) {
     suspended = true;
-    if (!use?.admin) {
+    if (!user?.admin) {
       return next(
         new Error(
           `This project has been suspended because its project owner is suspended`
@@ -200,7 +218,19 @@ export async function loadProject(req, res, next) {
   setupGit(dir, projectName);
 
   // Then get a container running
-  if (!suspended) await runContainer(projectName);
+  if (!suspended) {
+    const { app_type } = loadSettingsForProject(projectId)?.settings ?? {};
+    const staticType = app_type === null || app_type === `static`;
+    const inEditor = req.originalUrl.startsWith(`/v1/projects/edit/`);
+    const mayEdit = getAccessFor(user?.name, project.name) >= MEMBER;
+    const noStatic = inEditor && user && mayEdit;
+    if (!staticType || noStatic) {
+      stopStaticServer(projectName);
+      await runContainer(projectName);
+    } else {
+      runStaticSite(projectName);
+    }
+  }
 
   // is this a logged in user?
   if (res.locals.user) {
@@ -301,8 +331,13 @@ export async function remixProject(req, res, next) {
  * ...docs go here...
  */
 export function restartContainer(req, res, next) {
-  const projectName = res.locals.lookups.project.name;
-  restartDockerContainer(projectName);
+  const { project } = res.locals.lookups;
+  const settings = loadSettingsForProject(project.id);
+  if (settings.app_type === `static`) {
+    // do nothing. Static servers don't need restarting.
+  } else {
+    restartDockerContainer(project.name);
+  }
   next();
 }
 
@@ -316,14 +351,13 @@ export function startProject(req, res, next) {
     return next(new Error(`Not found`));
   }
 
+  // Is this project allowed to start?
   const { project } = res.locals.lookups;
-
   if (isProjectSuspended(project.id)) {
     return next(new Error(`suspended`));
   }
 
-  // Is this a static project, or does it need a container?
-  runContainer(project.name);
+  runProject(project);
 
   next();
 }
@@ -345,6 +379,7 @@ export async function updateProjectSettings(req, res, next) {
   const newName = newSettings.name;
   const newDir = join(CONTENT_DIR, newName);
   const containerDir = join(newDir, `.container`);
+  const app_type = newSettings.app_type ?? settings.app_type;
 
   if (projectName !== newName) {
     if (pathExists(newDir)) {
@@ -373,18 +408,22 @@ export async function updateProjectSettings(req, res, next) {
 
     res.locals.projectName = newName;
 
-    // Do we need to update our container files?
-    let containerChange = false;
-    if (run_script !== newSettings.run_script) {
-      containerChange = true;
-      writeFileSync(join(containerDir, `run.sh`), newSettings.run_script);
-    } else if (env_vars !== newSettings.env_vars) {
-      containerChange = true;
-      writeFileSync(join(containerDir, `.env`), newSettings.env_vars);
-    }
+    // Do we need to update our container files? (there's nothing
+    // to update wrt a static server, it's static content).
+    if (app_type === `docker`) {
+      let containerChange = false;
 
-    if (containerChange) {
-      await restartDockerContainer(projectName, true);
+      if (run_script !== newSettings.run_script) {
+        containerChange = true;
+        writeFileSync(join(containerDir, `run.sh`), newSettings.run_script);
+      } else if (env_vars !== newSettings.env_vars) {
+        containerChange = true;
+        writeFileSync(join(containerDir, `.env`), newSettings.env_vars);
+      }
+
+      if (containerChange) {
+        await restartDockerContainer(projectName, true);
+      }
     }
 
     next();

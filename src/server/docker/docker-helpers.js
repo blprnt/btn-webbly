@@ -1,8 +1,16 @@
 import { sep } from "node:path";
 import { getFreePort } from "../../helpers.js";
 import { exec, execSync } from "child_process";
-import { removeCaddyEntry, updateCaddyFile } from "../caddy/caddy.js";
-import { getProjectEnvironmentVariables } from "../database/index.js";
+import {
+  portBindings,
+  removeCaddyEntry,
+  updateCaddyFile,
+} from "../caddy/caddy.js";
+import {
+  getProject,
+  getProjectEnvironmentVariables,
+  loadSettingsForProject,
+} from "../database/index.js";
 
 /**
  * ...docs go here...
@@ -65,10 +73,23 @@ export function getAllRunningContainers() {
         return [k[0].toLowerCase() + k.substring(1), v];
       })
     );
-    const { image, command, state, iD: id, status, size } = obj;
-    containerData.push({ image, id, command, state, status, size });
+    const { image, command, state, iD: id, status, size, createdAt } = obj;
+    containerData.push({ image, id, command, state, status, size, createdAt });
   });
   return containerData;
+}
+
+/**
+ * ...docs go here...
+ */
+export function getAllRunningStaticServers() {
+  return Object.entries(portBindings)
+    .map(([name, props]) => {
+      const { port, serverProcess } = props;
+      if (!serverProcess) return false;
+      return { name, port };
+    })
+    .filter(Boolean);
 }
 
 /**
@@ -101,6 +122,29 @@ export async function restartContainer(name, rebuild = false) {
     }
   }
   console.log(`...done!`);
+}
+
+/**
+ * Run a static server for a static project, since we don't
+ * need a docker container for that, just an isolated server
+ * running on its own port, with content security.
+ *
+ * FIXME: this function doesn't feel like it should live here...
+ */
+export async function runStaticSite(projectName) {
+  if (portBindings[projectName]) return;
+  const port = await getFreePort();
+  console.log(
+    `attempting to run static server for ${projectName} on port ${port}`
+  );
+  const p = getProject(projectName);
+  const s = loadSettingsForProject(p.id);
+  const root = s.root_dir === null ? `` : s.root_dir;
+  const runCommand = `node src/server/static.js --project ${projectName} --port ${port} --root "${root}"`;
+  console.log(runCommand);
+  const child = exec(runCommand, { shell: true, stdio: `inherit` });
+  const binding = updateCaddyFile(projectName, port);
+  binding.serverProcess = child;
 }
 
 /**
@@ -181,4 +225,16 @@ export function stopContainer(name) {
     // failure just means it's already no longer running.
   }
   removeCaddyEntry(name);
+}
+
+/**
+ * ...docs go here...
+ */
+export function stopStaticServer(name) {
+  const { serverProcess } = portBindings[name] ?? {};
+  if (serverProcess) {
+    console.log(`Killing static server for ${name}`)
+    serverProcess.kill();
+    removeCaddyEntry(name);
+  }
 }

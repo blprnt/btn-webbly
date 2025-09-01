@@ -17,7 +17,8 @@ import { touch } from "./server/database/project.js";
 // Explicit env loading as we rely on process.env
 // at the module's top level scope...
 import dotenv from "@dotenvx/dotenvx";
-dotenv.config({ quiet: true });
+const envPath = join(import.meta.dirname, `../.env`);
+dotenv.config({ path: envPath, quiet: true });
 
 export const isWindows = process.platform === `win32`;
 export const npm = isWindows ? `npm. cmd` : `npm`;
@@ -43,9 +44,6 @@ const COMMIT_TIMEOUTS = {};
  */
 export function createRewindPoint(projectName, reason) {
   console.log(`scheduling rewind point`);
-
-  // An edit happened, clearly, so touch the project.
-  touch(projectName);
 
   const now = scrubDateTime(new Date().toISOString());
   reason = reason || `Autosave (${now})`;
