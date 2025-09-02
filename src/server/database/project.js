@@ -12,6 +12,7 @@ import {
   Models,
   UNKNOWN_USER,
   NOT_ACTIVATED,
+  ADMIN,
   OWNER,
   EDITOR,
   MEMBER,
@@ -37,7 +38,7 @@ const {
 
 const { WEB_EDITOR_APPS_HOSTNAME } = process.env;
 
-import { getUser, getUserSuspensions } from "./user.js";
+import { getUser, getUserAdminFlag, getUserSuspensions } from "./user.js";
 import { portBindings } from "../caddy/caddy.js";
 import {
   dockerDueToEdit,
@@ -133,6 +134,8 @@ export function getAccessFor(userName, projectName) {
   const u = User.find({ name: userName });
   if (!u.enabled_at) return NOT_ACTIVATED;
   const p = Project.find({ name: projectName });
+  const admin = getUserAdminFlag(userName);
+  if (admin) return ADMIN;
   const a = Access.find({ project_id: p.id, user_id: u.id });
   return a ? a.access_level : UNKNOWN_USER;
 }

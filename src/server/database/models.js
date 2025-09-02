@@ -8,6 +8,7 @@ const DEBUG_SQL = false;
 // not quite a fan of this, so this solution may change in the future:
 export const UNKNOWN_USER = -1;
 export const NOT_ACTIVATED = -2;
+export const ADMIN = 100; // full access on all the things.
 export const OWNER = 30; // full access, can delete projects
 export const EDITOR = 20; // edit access, cannot delete projects, can edit project settings
 export const MEMBER = 10; // edit access, cannot edit project settings
