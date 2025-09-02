@@ -9,6 +9,7 @@ import {
   mkdirSync,
   readFileSync,
   renameSync,
+  rmdirSync,
   rmSync,
   unlinkSync,
   writeFileSync,
@@ -83,29 +84,41 @@ export async function checkProjectHealth(req, res, next) {
  */
 function cloneProject(source, projectName, isStarter) {
   const dir = join(CONTENT_DIR, projectName);
+  const tempDir = join(CONTENT_DIR, `__${projectName}`);
 
   if (isStarter) {
     source = `__starter_projects/${source || `empty`}`;
   }
 
-  if (!pathExists(dir)) {
+  if (!pathExists(dir) && !pathExists(tempDir)) {
+    mkdirSync(tempDir);
     mkdirSync(dir);
-    cpSync(dir.replace(projectName, source), dir, { recursive: true });
+    cpSync(dir.replace(projectName, source), tempDir, { recursive: true });
+
     try {
-      unlinkSync(join(dir, `.git`), { recursive: true });
+      rmdirSync(join(tempDir, `.git`), { recursive: true });
     } catch (e) {
       // this can't fail.
     }
-    try {
-      unlinkSync(join(dir, `.container`, `.env`));
-    } catch (e) {
-      // we don't care if .env didn't exist =)
+    // Is this is a starter, we don't want the settings.json file
+    if (isStarter) {
+      try {
+        unlinkSync(join(tempDir, `.container`, `settings.json`));
+      } catch (e) {
+        // we don't care if .env didn't exist =)
+      }
     }
-    try {
-      unlinkSync(join(dir, `.data`), { recursive: true });
-    } catch (e) {
-      // we also don't care if there was no .data dir
+    // If it's *not* a starter, strip the .data dir!
+    else {
+      try {
+        unlinkSync(join(tempDir, `.data`), { recursive: true });
+      } catch (e) {
+        // we also don't care if there was no .data dir
+      }
     }
+
+    rmdirSync(dir, { recursive: true });
+    renameSync(tempDir, dir);
   }
 }
 
@@ -319,7 +332,6 @@ export async function remixProject(req, res, next) {
     const containerDir = join(CONTENT_DIR, newProjectName, `.container`);
     const runScript = join(containerDir, `run.sh`);
     writeFileSync(runScript, s.run_script);
-    if (isStarter) rmSync(join(containerDir, `settings.json`));
     next();
   } catch (e) {
     console.error(e);

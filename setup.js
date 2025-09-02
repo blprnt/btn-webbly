@@ -439,6 +439,7 @@ async function setupSqlite() {
     const {
       description,
       run_script,
+      env_vars,
       default_file,
       default_collapse,
       app_type,
@@ -454,12 +455,13 @@ async function setupSqlite() {
       result = db.prepare(`SELECT * FROM projects WHERE name = ?`).get(name);
       const { id } = result;
       db.prepare(
-        `INSERT INTO project_settings (project_id, default_file, default_collapse, run_script, app_type, root_dir) VALUES (?,?,?,?)`
+        `INSERT INTO project_settings (project_id, default_file, default_collapse, run_script, env_vars, app_type, root_dir) VALUES (?,?,?,?,?,?,?)`
       ).run(
         id,
         default_file ?? ``,
         default_collapse ?? ``,
         run_script,
+        env_vars ?? ``,
         app_type,
         root_dir
       );
@@ -473,8 +475,16 @@ async function setupSqlite() {
         id
       );
       db.prepare(
-        `UPDATE project_settings SET default_file=?, default_collapse=?, run_script=? WHERE project_id=?`
-      ).run(default_file ?? ``, default_collapse ?? ``, run_script, id);
+        `UPDATE project_settings SET default_file=?, default_collapse=?, run_script=?, env_vars=?, app_type=?, root_dir=? WHERE project_id=?`
+      ).run(
+        default_file ?? ``,
+        default_collapse ?? ``,
+        run_script,
+        env_vars ?? ``,
+        app_type,
+        root_dir,
+        id
+      );
     }
   });
 }
