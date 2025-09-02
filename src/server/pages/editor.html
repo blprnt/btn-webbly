@@ -33,10 +33,10 @@
           >✨</a
         >
         {% endif %}
-        {% if user and projectOwner %}
+        {% if user and (user.admin or projectOwner) %}
         <button class="project-settings">settings</button>
         {% endif %}
-        {% if user and projectMember %}
+        {% if user and (user.admin or projectMember) %}
         <button id="format" title="Make my code pretty!">🤩</button>
         {% endif %}
       </span>
