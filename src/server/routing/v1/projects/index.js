@@ -78,7 +78,6 @@ projects.get(
  */
 projects.get(
   `/health/:project`,
-  verifyLogin,
   bindCommonValues,
   checkProjectHealth,
   (_req, res) => {
