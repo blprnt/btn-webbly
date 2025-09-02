@@ -331,7 +331,8 @@ export async function remixProject(req, res, next) {
     const s = copyProjectSettings(project.id, newProject.id);
     const containerDir = join(CONTENT_DIR, newProjectName, `.container`);
     const runScript = join(containerDir, `run.sh`);
-    writeFileSync(runScript, s.run_script);
+    // shell scripts *must* use unix line endings.
+    writeFileSync(runScript, s.run_script.replace(/\r\n/g, `\n`));
     next();
   } catch (e) {
     console.error(e);
@@ -427,7 +428,11 @@ export async function updateProjectSettings(req, res, next) {
 
       if (run_script !== newSettings.run_script) {
         containerChange = true;
-        writeFileSync(join(containerDir, `run.sh`), newSettings.run_script);
+        writeFileSync(
+          join(containerDir, `run.sh`),
+          // shell scripts *must* use unix line endings.
+          newSettings.run_script.replace(/\r\n/g, `\n`)
+        );
       } else if (env_vars !== newSettings.env_vars) {
         containerChange = true;
         writeFileSync(join(containerDir, `.env`), newSettings.env_vars);
