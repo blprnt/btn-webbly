@@ -40,6 +40,9 @@ function addSessionManagement(app) {
   const sessionsDB = new sqlite3("./data/sessions.sqlite3");
   app.use(
     session({
+      cookie: {
+        httpOnly: true,
+      },
       resave: false,
       saveUninitialized: false,
       secret: process.env.SESSION_SECRET,

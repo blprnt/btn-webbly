@@ -38,6 +38,7 @@ function processUserLoginNormally(userObject) {
         `This user account has been suspended (${s.map((s) => `"${s.reason}"`).join(`, `)})`
       );
     }
+    // Is this user an admin? If so, ammend the session record.
     const a = Admin.find({ user_id: u.id });
     return { ...u, admin: a ? true : undefined };
   }

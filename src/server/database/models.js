@@ -22,9 +22,9 @@ db.pragma(`foreign_keys = ON`);
  */
 export async function getMigrationStatus() {
   let version = db.prepare(`PRAGMA user_version`).get().user_version;
-  const migrations = (
-    await readContentDir(join(dirname(dbPath), `migrations`))
-  ).map((v) => parseFloat(v.match(/\d+/)[0]));
+  const migrations = (await readContentDir(join(dirname(dbPath), `migrations`)))
+    .map((v) => parseFloat(v.match(/\d+/)?.[0]))
+    .filter(Boolean);
   return migrations.at(-1) - version;
 }
 
