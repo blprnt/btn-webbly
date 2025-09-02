@@ -147,6 +147,7 @@ export function getAllProjects(omitStarters = true) {
   projects.forEach((p) => {
     if (!p) return;
     if (omitStarters && isStarterProject(p.id)) return;
+    p.settings = ProjectSettings.find({ project_id: p.id });
     p.suspensions = [];
     projectList[p.id] = p;
   });
