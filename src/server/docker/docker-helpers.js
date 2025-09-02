@@ -203,6 +203,8 @@ export async function runContainer(projectName) {
     }, 2000);
   });
 
+  console.log(result);
+
   try {
     port = result.match(/0.0.0.0:(\d+)->/m)[1];
     console.log(`- found a running container on port ${port}`);
