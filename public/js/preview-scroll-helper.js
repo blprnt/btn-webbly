@@ -1,6 +1,6 @@
 // FIXME: TODO: doing this right *way* more effort than
 //              is currently warranted, so this is a hack.
-if (window.parent) {
+if (window.self !== window.parent || window.self !== window.top) {
   const maintainScroll = localStorage.getItem(`preview:scroll`);
 
   if (maintainScroll) {
