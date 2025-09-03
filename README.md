@@ -134,26 +134,31 @@ And if you need inspiration: let me remind you that the [CSS Zen Garden](https:/
 
 As of August 18, 2025, as a visitor you can:
 
-- load a project's "edit" route and see the code and preview. If you try to edit anything, the site will just undo your edits, because the server will have rejected them. You need to be logged in and have edit rights.
+- Load the landing page (obviously =D),
+- Sign up, by logging in using your GitHub account (but note that signing in doesn't actually give you a "working" account, you first need to be approved by an admin), and
+- Load projects in the editor and see the code and preview. You won't be able to edit any code, but you can look at all every file that is visiable to not-project-members, and you can see the resulting site running in the "preview" (which is of course not a preview at all, that's just literally the live site).
 
-As a user you can:
+As a signed in and approved user you can:
 
-- Log in with github.
-- Load any project's "edit" route. You can't actually edit unless you have edit rights, but you can download the project as a .zip file (note that this will not include a project's private data dir nor .env file, of course).
-- Remix projects, using the sparkle button, which creates a new copy of the public code parts with a new name "yourusername-projectname" (so you'll probably want to rename it!).
-- Create, load, and edit your own projects, including editing project settings (project name, provided the new name isn't taken, description, build script, run script, and environment variables).
-- Auto-format any supported file using the sparkly-eyed emoji
-- Download your full project, including private data directory and .env file.
-- Restart your project's container.
+- Log in with github, after which the landing page is "your" page on the platform.
+- Start new projects by remixing a starter project on your landing page.
+- Load any project in the editor (yours or other folks'). Just like visitors, you can't edit any projects that you're not a member of, but you **do** get a download link that lets you download the entire project (without members-only data) as a zip file in case you want to review or remix it off-platform. 
+- Load your own projects in the editor with full edit rights:
+  - you can edit project settings, including the project run script and its environment variables, as well as specify whether it's a static project (e.g. in only needs a static server pointed at a root dir in production) or a persistent project that needs a full-fat Ubuntu container to always be running in order to serve content.
+  - you can edit project files, including auto-formatting them if they're file types that are recognized by `prettier` (for html/css/js) or `black` (for python)
+  - you can create a folder called `.data` that counts as the only safe place to put private project data
+  - you can download your project without it omitting anything
+  - you can force-restart your project's docker container, which is useful for when it gets stuck, or when you're running a project that does auto-reload things when you change source files.
+- Remix projects, using the sparkle button. This creates a new copy of the public code parts with either a name you pick, or "yourusername-projectname" (so you'll probably want to rename it afterwards!).
 
 And as an admin you can:
 
-- Do all the above, plus
-- View the admin page, which lets you:
-  - see a list of, and enable/disable, (un)suspend, and delete user accounts
-  - see a list of and (un)suspend, and delete projects
-  - see a list of and stop running, or delete expired containers
-- Load up suspended projects in the editor (without running the project container)
+- Do all the above, plus view the admin page, which lets you:
+  - see a list of users, with options to enable/disable, (un)suspend, and delete their accounts.
+  - see a list of projects, with options to (un)suspend, and delete projects
+  - see a list of active docker containers, with options to stop or remove them
+  - see a list of active static servers, with an option to stop them.
+- You are also able to load suspended projects in the editor, so you can see what a project does without "running" it, and inspect and edit other folk's project settings.
 
 ## What if I want to deploy my own instance?
 
