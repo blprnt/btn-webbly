@@ -38,7 +38,7 @@ function project(name) {
     };
   } catch (e) {
     // orphaned image? O_o
-    stopContainer(image);
+    stopContainer(name);
   }
 }
 
