@@ -14,7 +14,10 @@ export const EDITOR = 20; // edit access, cannot delete projects, can edit proje
 export const MEMBER = 10; // edit access, cannot edit project settings
 
 // We're in ./src/server/database, and we want ./data
-const dbPath = `${import.meta.dirname}/../../../data/data.sqlite3`;
+const testing = process.env.NODE_ENV === `TESTING`;
+const dbName = testing ? `test.sqlite3` : `data.sqlite3`;
+const dbPath = `${import.meta.dirname}/../../../data/${dbName}`;
+
 const db = sqlite3(dbPath);
 db.pragma(`foreign_keys = ON`);
 
@@ -26,7 +29,8 @@ export async function getMigrationStatus() {
   const migrations = (await readContentDir(join(dirname(dbPath), `migrations`)))
     .map((v) => parseFloat(v.match(/\d+/)?.[0]))
     .filter(Boolean);
-  return migrations.at(-1) - version;
+  const last = (migrations.at(-1) ?? 0) + 1;
+  return last - version;
 }
 
 /**
@@ -41,8 +45,9 @@ export function runQuery(sql, values = []) {
  * Let's define a generic model class, because we're just making things work right now.
  */
 class Model {
-  constructor(table) {
+  constructor(table, primaryKey = `id`) {
     this.table = table;
+    this.primaryKey = primaryKey;
   }
 
   /**
@@ -131,7 +136,8 @@ class Model {
    * Save a record - if the primary key is not "id", you
    * will need to explicitly specify it as second argument.
    */
-  save(record, primaryKey = `id`) {
+  save(record) {
+    const { primaryKey } = this;
     const pval = record[primaryKey];
     delete record[primaryKey];
     if (record.updated_at)
@@ -149,14 +155,64 @@ class Model {
 
 // And then let's create some models!
 export const Models = {
-  Access: new Model(`project_access`),
-  Admin: new Model(`admin_table`),
-  Login: new Model(`user_logins`),
-  Project: new Model(`projects`),
-  ProjectSettings: new Model(`project_settings`),
-  ProjectSuspension: new Model(`suspended_projects`),
-  Remix: new Model(`remix`),
-  StarterProject: new Model(`starter_projects`),
-  User: new Model(`users`),
-  UserSuspension: new Model(`suspended_users`),
+  Access: new Model(`project_access`), // TODO: how do we do compound keys?
+  Admin: new Model(`admin_table`, `user_id`),
+  Login: new Model(`user_logins`), // <- same here
+  Project: new Model(`projects`, `id`),
+  ProjectSettings: new Model(`project_settings`, `project_id`),
+  ProjectSuspension: new Model(`suspended_projects`, `id`),
+  Remix: new Model(`remix`, `project_id`),
+  StarterProject: new Model(`starter_projects`, `project_id`),
+  User: new Model(`users`, `id`),
+  UserSuspension: new Model(`suspended_users`, `id`),
 };
+
+/**
+ * This should be obvious... =D
+ */
+export async function initTestDatabase() {
+  if (!testing) return;
+
+  await import("./project.js");
+  const now = scrubDateTime(new Date().toISOString());
+
+  // Create an admin user
+  const admin = Models.User.findOrCreate({ name: `test admin` });
+  const admin_id = admin.id;
+  admin.enabled_at = now;
+  Models.User.save(admin);
+  Models.Admin.findOrCreate({ user_id: admin_id });
+
+  // And a regular user
+  const user = Models.User.findOrCreate({ name: `test user` });
+  const user_id = user.id;
+  user.enabled_at = now;
+  Models.User.save(user);
+
+  // Create a "starter" project
+  const starter = Models.Project.findOrCreate({
+    name: `test starter`,
+    description: `a starter project`,
+  });
+  Models.StarterProject.findOrCreate({ project_id: starter.id });
+
+  // Then create a project for our regular user and pretend
+  // that it was a remix of our "starter" project.
+  const project = Models.Project.findOrCreate({
+    name: `test project`,
+    description: `a test project`,
+  });
+  const project_id = project.id;
+  Models.ProjectSettings.findOrCreate({
+    project_id,
+    run_script: `npx http-server`,
+  });
+  Models.Access.findOrCreate({ project_id, user_id });
+  Models.Remix.findOrCreate({ original_id: starter.id, project_id });
+}
+
+export function concludeTesting() {
+  if (!testing) return;
+  db.exec(`DELETE FROM users`);
+  db.exec(`DELETE FROM projects`);
+}

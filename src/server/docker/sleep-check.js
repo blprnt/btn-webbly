@@ -1,4 +1,4 @@
-import { getProject, loadSettingsForProject } from "../database/project.js";
+import { getProject } from "../database/project.js";
 import { getAllRunningContainers, stopContainer } from "./docker-helpers.js";
 const { max } = Math;
 
@@ -16,6 +16,9 @@ const dockerThreshold = 24 * 60;
 // project, regardless of app_type?
 export const dockerDueToEdit = 5;
 
+// A timer so we can cancel runs
+let runTimer;
+
 // date formatting helper
 function date(offset = 0) {
   const d = new Date(Date.now() + offset).toISOString();
@@ -28,17 +31,16 @@ function log(msg) {
 }
 
 // helper function for getting a project
-function project(name) {
+function project(slug) {
   try {
-    const p = getProject(name);
-    const s = loadSettingsForProject(p.id);
+    const p = getProject(slug);
     return {
       updated_at: p.updated_at,
-      app_type: s.app_type,
+      app_type: p.settings.app_type,
     };
   } catch (e) {
     // orphaned image? O_o
-    stopContainer(name);
+    stopContainer(slug);
   }
 }
 
@@ -54,7 +56,7 @@ export function getTimingDiffInMinutes(timestamp) {
  * that can be "safely" put to sleep because they haven't been edited
  * or requested for a while.
  */
-export function scheduleContainerCheck() {
+export async function scheduleContainerCheck() {
   log(`Checking to see if any containers need to be put to sleep`);
 
   getAllRunningContainers().forEach(({ image, createdAt, p: d }) => {
@@ -76,5 +78,7 @@ export function scheduleContainerCheck() {
   });
 
   log(`Scheduling next container sleep check for ${date(runInterval)}`);
-  setTimeout(scheduleContainerCheck, runInterval);
+  runTimer = setTimeout(scheduleContainerCheck, runInterval);
+
+  return () => clearTimeout(runTimer);
 }
