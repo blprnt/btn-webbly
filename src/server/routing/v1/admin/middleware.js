@@ -53,7 +53,7 @@ export function stopContainer(req, res, next) {
 
 export function deleteUser(req, res, next) {
   try {
-    Database.deleteUser(res.locals.lookups.user.id);
+    Database.deleteUser(res.locals.lookups.user);
     next();
   } catch (e) {
     next(e);
@@ -62,7 +62,7 @@ export function deleteUser(req, res, next) {
 
 export function disableUser(req, res, next) {
   try {
-    Database.disableUser(res.locals.lookups.user.id);
+    Database.disableUser(res.locals.lookups.user);
     next();
   } catch (e) {
     next(e);
@@ -71,7 +71,7 @@ export function disableUser(req, res, next) {
 
 export function enableUser(req, res, next) {
   try {
-    Database.enableUser(res.locals.lookups.user.id);
+    Database.enableUser(res.locals.lookups.user);
     next();
   } catch (e) {
     next(e);
@@ -80,7 +80,7 @@ export function enableUser(req, res, next) {
 
 export function suspendUser(req, res, next) {
   try {
-    Database.suspendUser(res.locals.lookups.user.id, req.body.reason);
+    Database.suspendUser(res.locals.lookups.user, req.body.reason);
     next();
   } catch (e) {
     next(e);

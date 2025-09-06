@@ -24,17 +24,17 @@ describe(`user tests`, async () => {
 
   test(`deleteUser`, () => {
     const user = Models.User.create({ name: `disposable` });
-    User.deleteUser(user.id);
+    User.deleteUser(user);
   });
 
   test(`enable/disable`, () => {
     let user = User.getUser(`test user`);
 
-    User.enableUser(user.id);
+    User.enableUser(user);
     user = User.getUser(`test user`);
     assert.notEqual(user.enabled_at, null);
 
-    User.disableUser(user.id);
+    User.disableUser(user);
     user = User.getUser(`test user`);
     assert.equal(user.enabled_at, null);
   });
@@ -44,14 +44,17 @@ describe(`user tests`, async () => {
     assert.equal(users.length, 2);
   });
 
-  test(`getUserAdminFlag`, () => {
-    assert.equal(User.getUserAdminFlag(`test admin`), true);
-    assert.equal(User.getUserAdminFlag(`test user`), false);
+  test(`userIsAdmin`, () => {
+    const admin = User.getUser(`test admin`);
+    assert.equal(User.userIsAdmin(admin), true);
+
+    const user = User.getUser(`test user`);
+    assert.equal(User.userIsAdmin(user), false);
   });
 
   test(`getUserSettings`, () => {
     const admin = User.getUser(`test admin`);
-    let settings = User.getUserSettings(admin.id);
+    let settings = User.getUserSettings(admin);
     assert.deepEqual(settings, {
       name: `test admin`,
       admin: true,
@@ -60,9 +63,9 @@ describe(`user tests`, async () => {
     });
 
     const user = User.getUser(`test user`);
-    const s = User.suspendUser(user.id, `why not`);
-    User.disableUser(user.id);
-    settings = User.getUserSettings(user.id);
+    const s = User.suspendUser(user, `why not`);
+    User.disableUser(user);
+    settings = User.getUserSettings(user);
     assert.deepEqual(settings, {
       name: `test user`,
       admin: false,
@@ -73,12 +76,12 @@ describe(`user tests`, async () => {
 
   test(`getUserSuspensions`, () => {
     const user = Models.User.create({ name: `sus user` });
-    const s = User.suspendUser(user.id, `why not`);
+    const s = User.suspendUser(user, `why not`);
     User.unsuspendUser(s.id);
-    const t = User.suspendUser(user.id, `why not, again`);
-    let list = User.getUserSuspensions(user.id);
+    const t = User.suspendUser(user, `why not, again`);
+    let list = User.getUserSuspensions(user);
     assert.equal(list.length, 1);
-    list = User.getUserSuspensions(user.id, true);
+    list = User.getUserSuspensions(user, true);
     assert.equal(list.length, 2);
   });
 
@@ -87,8 +90,8 @@ describe(`user tests`, async () => {
     const user = User.getUser(`test user`);
     const rando = Models.User.create({ name: `rando calrisian` });
 
-    assert.equal(User.hasAccessToUserRecords(user.id, user.id), true);
-    assert.equal(User.hasAccessToUserRecords(admin.id, user.id), true);
-    assert.equal(User.hasAccessToUserRecords(user.id, rando.id), false);
+    assert.equal(User.hasAccessToUserRecords(user, user), true);
+    assert.equal(User.hasAccessToUserRecords(admin, user), true);
+    assert.equal(User.hasAccessToUserRecords(user, rando), false);
   });
 });

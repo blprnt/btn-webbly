@@ -136,7 +136,7 @@ describe(`project testing`, async () => {
   test(`projectSuspendedThroughOwner`, () => {
     const user = User.getUser(`test user`);
     const project = Project.getOwnedProjectsForUser(user)[0];
-    const s = User.suspendUser(user.id, `testing`);
+    const s = User.suspendUser(user, `testing`);
     let suspended = Project.projectSuspendedThroughOwner(project);
     assert.equal(suspended, true);
     User.unsuspendUser(s.id);
@@ -168,6 +168,7 @@ describe(`project testing`, async () => {
       await fetch(`http://localhost:${port}`).then((r) => r.text());
       found = true;
     } catch (e) {
+      /* node:coverage disable */
       found = e;
     }
     Project.stopProject(project);

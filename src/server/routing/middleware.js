@@ -9,7 +9,7 @@ import {
   getProject,
   getProjectListForUser,
   getUser,
-  getUserAdminFlag,
+  userIsAdmin,
   getUserSuspensions,
   hasAccessToUserRecords,
   getStarterProjects,
@@ -65,7 +65,7 @@ export async function verifyLogin(req, res, next) {
   if (!u.enabled_at) {
     return next(new Error(`This user account has not been actived yet`));
   }
-  const suspensions = getUserSuspensions(u.id);
+  const suspensions = getUserSuspensions(u);
   if (suspensions.length) {
     return next(
       new Error(
@@ -80,7 +80,7 @@ export async function verifyLogin(req, res, next) {
  * ...docs go here...
  */
 export function verifyAdmin(req, res, next) {
-  if (getUserAdminFlag(res.locals.user.name)) {
+  if (userIsAdmin(res.locals.user)) {
     res.locals.adminCall = true;
     next();
   } else {
@@ -94,10 +94,8 @@ export function verifyAdmin(req, res, next) {
  */
 export function verifyAccesToUser(req, res, next) {
   const { user, lookups } = res.locals;
-  const { id: sessionUserId } = user;
-  const { id: lookupUserId } = lookups.user ?? {};
-  if (!lookupUserId) return next(new Error(`No such user`));
-  if (hasAccessToUserRecords(sessionUserId, lookupUserId)) {
+  if (!lookups.user) return next(new Error(`No such user`));
+  if (hasAccessToUserRecords(user, lookups.user)) {
     next();
   } else {
     next(new Error(`Access denied`));

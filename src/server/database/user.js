@@ -34,7 +34,7 @@ function processUserLoginNormally(userObject) {
       // This shouldn't be possible, so...
       throw new Error(`User not found`);
     }
-    const s = getUserSuspensions(u.id);
+    const s = getUserSuspensions(u);
     if (s.length) {
       throw new Error(
         `This user account has been suspended (${s.map((s) => `"${s.reason}"`).join(`, `)})`,
@@ -75,11 +75,10 @@ function __processFirstTimeUserLogin(userObject) {
 /**
  * ...docs go here...
  */
-export function deleteUser(userId) {
-  const u = getUser(userId);
-  console.log(`deleting user ${u.name} with id ${u.id}`);
-  const access = Access.findAll({ user_id: u.id });
-  Access.delete({ user_id: u.id });
+export function deleteUser(user) {
+  console.log(`deleting user ${user.name} with id ${user.id}`);
+  const access = Access.findAll({ user_id: user.id });
+  Access.delete({ user_id: user.id });
   access.forEach(({ project_id }) => {
     const p = Project.find({ id: project_id });
     if (p && Access.findAll({ project_id }).length === 0) {
@@ -88,28 +87,26 @@ export function deleteUser(userId) {
       rmSync(projectDir, { recursive: true, force: true });
     }
   });
-  User.delete(u);
+  User.delete(user);
   // ON DELETE CASCADE should have taken care of everything else...
 }
 
 /**
  * ...docs go here...
  */
-export function disableUser(userNameOrId) {
-  const u = getUser(userNameOrId);
-  u.enabled_at = null;
-  User.save(u);
-  return u;
+export function disableUser(user) {
+  user.enabled_at = null;
+  User.save(user);
+  return user;
 }
 
 /**
  * ...docs go here...
  */
-export function enableUser(userNameOrId) {
-  const u = getUser(userNameOrId);
-  u.enabled_at = new Date().toISOString();
-  User.save(u);
-  return u;
+export function enableUser(user) {
+  user.enabled_at = new Date().toISOString();
+  User.save(user);
+  return user;
 }
 
 /**
@@ -160,10 +157,8 @@ export function getUser(userNameOrId) {
 /**
  * ...docs go here...
  */
-export function getUserAdminFlag(userName) {
-  const u = User.find({ name: userName });
-  if (!u) throw new Error(`User not found`);
-  const a = Admin.find({ user_id: u.id });
+export function userIsAdmin(user) {
+  const a = Admin.find({ user_id: user.id });
   if (!a) return false;
   return true;
 }
@@ -171,15 +166,13 @@ export function getUserAdminFlag(userName) {
 /**
  * ...docs go here...
  */
-export function getUserSettings(userId) {
-  const u = User.find({ id: userId });
-  if (!u) throw new Error(`User not found`);
-  const s = UserSuspension.find({ user_id: u.id });
-  const a = Admin.find({ user_id: u.id });
+export function getUserSettings(user) {
+  const s = UserSuspension.find({ user_id: user.id });
+  const a = Admin.find({ user_id: user.id });
   return {
-    name: u.name,
+    name: user.name,
     admin: a ? true : false,
-    enabled: u.enabled_at ? true : false,
+    enabled: user.enabled_at ? true : false,
     suspended: s ? true : false,
   };
 }
@@ -187,13 +180,8 @@ export function getUserSettings(userId) {
 /**
  * ...docs go here...
  */
-export function getUserSuspensions(userNameOrId, includeOld = false) {
-  let user_id = userNameOrId;
-  if (typeof userNameOrId !== `number`) {
-    const u = User.find({ name: userNameOrId });
-    user_id = u.id;
-  }
-  const s = UserSuspension.findAll({ user_id });
+export function getUserSuspensions(user, includeOld = false) {
+  const s = UserSuspension.findAll({ user_id: user.id });
   if (includeOld) return s;
   return s.filter((s) => !s.invalidated_at);
 }
@@ -201,11 +189,9 @@ export function getUserSuspensions(userNameOrId, includeOld = false) {
 /**
  * ...docs go here...
  */
-export function hasAccessToUserRecords(sessionUserId, lookupUserId) {
-  if (sessionUserId === lookupUserId) return true;
-  const u = User.find({ id: sessionUserId });
-  if (!u) throw new Error(`User not found`);
-  const a = Admin.find({ user_id: u.id });
+export function hasAccessToUserRecords(user, targetUser) {
+  if (user.id === targetUser.id) return true;
+  const a = Admin.find({ user_id: user.id });
   if (!a) return false;
   return true;
 }
@@ -213,12 +199,15 @@ export function hasAccessToUserRecords(sessionUserId, lookupUserId) {
 /**
  * ...docs go here...
  */
-export function suspendUser(userNameOrId, reason, notes = ``) {
+export function suspendUser(user, reason, notes = ``) {
   if (!reason) throw new Error(`Cannot suspend user without a reason`);
-  const u = getUser(userNameOrId);
   try {
-    const suspension = UserSuspension.create({ user_id: u.id, reason, notes });
-    const projects = getOwnedProjectsForUser(u);
+    const suspension = UserSuspension.create({
+      user_id: user.id,
+      reason,
+      notes,
+    });
+    const projects = getOwnedProjectsForUser(user);
     projects.forEach((p) => {
       const s = ProjectSettings.find({ project_id: p.id });
       if (s.app_type === `static`) {
@@ -230,7 +219,7 @@ export function suspendUser(userNameOrId, reason, notes = ``) {
     return suspension;
   } catch (e) {
     console.error(e);
-    console.log(u, reason, notes);
+    console.log(user, reason, notes);
   }
 }
 
