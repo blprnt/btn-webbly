@@ -4,7 +4,7 @@ import { createDockerProject } from "../../test-helpers.js";
 import {
   initTestDatabase,
   concludeTesting,
-} from "../../../server/database/models.js";
+} from "../../../server/database/index.js";
 
 describe(`sleep check tests`, async () => {
   before(async () => await initTestDatabase());

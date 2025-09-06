@@ -18,20 +18,8 @@ const testing = process.env.NODE_ENV === `TESTING`;
 const dbName = testing ? `test.sqlite3` : `data.sqlite3`;
 const dbPath = `${import.meta.dirname}/../../../data/${dbName}`;
 
-const db = sqlite3(dbPath);
+export const db = sqlite3(dbPath);
 db.pragma(`foreign_keys = ON`);
-
-/**
- * Are we on the right version of the database?
- */
-export async function getMigrationStatus() {
-  let version = db.prepare(`PRAGMA user_version`).get().user_version;
-  const migrations = (await readContentDir(join(dirname(dbPath), `migrations`)))
-    .map((v) => parseFloat(v.match(/\d+/)?.[0]))
-    .filter(Boolean);
-  const last = (migrations.at(-1) ?? 0) + 1;
-  return last - version;
-}
 
 /**
  * Generic "run me this SQL" function, because sometimes you need complex queries.
@@ -166,53 +154,3 @@ export const Models = {
   User: new Model(`users`, `id`),
   UserSuspension: new Model(`suspended_users`, `id`),
 };
-
-/**
- * This should be obvious... =D
- */
-export async function initTestDatabase() {
-  if (!testing) return;
-
-  await import("./project.js");
-  const now = scrubDateTime(new Date().toISOString());
-
-  // Create an admin user
-  const admin = Models.User.findOrCreate({ name: `test admin` });
-  const admin_id = admin.id;
-  admin.enabled_at = now;
-  Models.User.save(admin);
-  Models.Admin.findOrCreate({ user_id: admin_id });
-
-  // And a regular user
-  const user = Models.User.findOrCreate({ name: `test user` });
-  const user_id = user.id;
-  user.enabled_at = now;
-  Models.User.save(user);
-
-  // Create a "starter" project
-  const starter = Models.Project.findOrCreate({
-    name: `test starter`,
-    description: `a starter project`,
-  });
-  Models.StarterProject.findOrCreate({ project_id: starter.id });
-
-  // Then create a project for our regular user and pretend
-  // that it was a remix of our "starter" project.
-  const project = Models.Project.findOrCreate({
-    name: `test project`,
-    description: `a test project`,
-  });
-  const project_id = project.id;
-  Models.ProjectSettings.findOrCreate({
-    project_id,
-    run_script: `npx http-server`,
-  });
-  Models.Access.findOrCreate({ project_id, user_id });
-  Models.Remix.findOrCreate({ original_id: starter.id, project_id });
-}
-
-export function concludeTesting() {
-  if (!testing) return;
-  db.exec(`DELETE FROM users`);
-  db.exec(`DELETE FROM projects`);
-}

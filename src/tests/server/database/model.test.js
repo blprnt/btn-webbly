@@ -1,7 +1,12 @@
-import test, { describe } from "node:test";
+import test, { after, before, describe } from "node:test";
 import assert from "node:assert/strict";
 import { resolve, join } from "node:path";
 import * as Models from "../../../server/database/models.js";
+import {
+  getMigrationStatus,
+  initTestDatabase,
+  concludeTesting,
+} from "../../../server/database/index.js";
 
 import dotenv from "@dotenvx/dotenvx";
 const envPath = resolve(
@@ -9,9 +14,10 @@ const envPath = resolve(
 );
 dotenv.config({ quiet: true, path: envPath });
 
-await Models.initTestDatabase();
-
 describe(`Model tests`, async () => {
+  before(async () => await initTestDatabase());
+  after(() => concludeTesting());
+
   test(`constants`, () => {
     assert.equal(Models.UNKNOWN_USER, -1);
     assert.equal(Models.NOT_ACTIVATED, -2);
@@ -22,7 +28,7 @@ describe(`Model tests`, async () => {
   });
 
   test(`getMigrationStatus`, async () => {
-    assert.equal(await Models.getMigrationStatus(), 0);
+    assert.equal(await getMigrationStatus(), 0);
   });
 
   test(`runQuery`, () => {

@@ -5,7 +5,7 @@ import {
   initTestDatabase,
   concludeTesting,
   Models,
-} from "../../../../../server/database/models.js";
+} from "../../../../../server/database/index.js";
 import * as Project from "../../../../../server/database/project.js";
 import * as User from "../../../../../server/database/user.js";
 import * as Middleware from "../../../../../server/routing/v1/admin/middleware.js";

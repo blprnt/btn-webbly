@@ -4,7 +4,7 @@ import { resolve, join } from "node:path";
 import {
   initTestDatabase,
   concludeTesting,
-} from "../../../server/database/models.js";
+} from "../../../server/database/index.js";
 import * as User from "../../../server/database/user.js";
 import * as Project from "../../../server/database/project.js";
 
@@ -21,10 +21,6 @@ dotenv.config({ quiet: true, path: envPath });
 describe(`project testing`, async () => {
   before(async () => await initTestDatabase());
   after(() => concludeTesting());
-
-  /*
-  export function touch(project) {
-  */
 
   test(`getMostRecentProjects`, () => {
     const projects = Project.getMostRecentProjects(5);
@@ -168,7 +164,7 @@ describe(`project testing`, async () => {
       await fetch(`http://localhost:${port}`).then((r) => r.text());
       found = true;
     } catch (e) {
-      /* node:coverage disable */
+      // I have no idea how to force this to fail =)
       found = e;
     }
     Project.stopProject(project);
@@ -185,6 +181,7 @@ describe(`project testing`, async () => {
       await fetch(`http://localhost:${port}`).then((r) => r.text());
       found = true;
     } catch (e) {
+      // I have no idea how to force this to fail =)
       found = e;
     }
     await cleanup();
@@ -205,6 +202,7 @@ describe(`project testing`, async () => {
       await fetch(`http://localhost:${port}`).then((r) => r.text());
       found = true;
     } catch (e) {
+      // I have no idea how to force this to fail =)
       found = e;
     }
     Project.stopProject(project);

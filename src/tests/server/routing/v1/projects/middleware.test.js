@@ -5,7 +5,7 @@ import { resolve, join } from "node:path";
 import {
   initTestDatabase,
   concludeTesting,
-} from "../../../../../server/database/models.js";
+} from "../../../../../server/database/index.js";
 import * as Middleware from "../../../../../server/routing/v1/projects/middleware.js";
 import * as FileMiddleware from "../../../../../server/routing/v1/files/middleware.js";
 import {

@@ -6,7 +6,6 @@ import { setupRoutes } from "./routing/index.js";
 import { watchForRebuild } from "./watcher.js";
 import { setupCaddy, startCaddy } from "./caddy/caddy.js";
 import { setupTemplating } from "./templating.js";
-import { getMigrationStatus } from "./database/models.js";
 import { scheduleContainerCheck } from "./docker/sleep-check.js";
 
 // And our environment. Note that this kicks in AFTER
@@ -15,6 +14,7 @@ import { scheduleContainerCheck } from "./docker/sleep-check.js";
 // top level of any module that doesn't also run the
 // dotenv.config function as part of its own code...
 import dotenv from "@dotenvx/dotenvx";
+import { applyMigrations } from "./database/utils.js";
 const envPath = join(import.meta.dirname, `../../.env`);
 dotenv.config({ path: envPath, quiet: true });
 
@@ -47,15 +47,10 @@ setDefaultAspects(app);
 setupRoutes(app);
 
 app.listen(PORT, async () => {
-  const missingMigrations = await getMigrationStatus();
-  if (missingMigrations > 0) {
-    console.error(`
-Error: your datatabase is ${missingMigrations} migrations behind!
-
-Please rerun "node setup" to ensure your database schema is up to date.
-`);
-    process.exit(1);
-  }
+  // Ensure the database is up to date
+  await applyMigrations(
+    join(import.meta.dirname, `..`, `..`, `data`, `data.sqlite3`),
+  );
 
   // Generate the server address notice
   const msg = `=   Server running on https://${WEB_EDITOR_HOSTNAME}   =`;

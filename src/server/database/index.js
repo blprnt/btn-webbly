@@ -4,17 +4,11 @@ import {
   OWNER,
   EDITOR,
   MEMBER,
-  getMigrationStatus,
+  Models,
+  db,
 } from "./models.js";
 
-export {
-  UNKNOWN_USER,
-  NOT_ACTIVATED,
-  OWNER,
-  EDITOR,
-  MEMBER,
-  getMigrationStatus,
-};
+export { UNKNOWN_USER, NOT_ACTIVATED, OWNER, EDITOR, MEMBER, Models };
 
 // User related database functions
 import {
@@ -93,3 +87,80 @@ export {
   unsuspendProject,
   updateSettingsForProject,
 };
+
+import { readContentDir, scrubDateTime } from "../../helpers.js";
+import { applyMigrations } from "./utils.js";
+import { join } from "node:path";
+
+const testing = process.env.NODE_ENV === `TESTING`;
+const dataPath = join(import.meta.dirname, `..`, `..`, `..`, `data`);
+
+/**
+ * Are we on the right version of the database?
+ */
+export async function getMigrationStatus() {
+  let version = db.prepare(`PRAGMA user_version`).get().user_version;
+  const migrations = (await readContentDir(join(dataPath, `migrations`)))
+    .map((v) => parseFloat(v.match(/\d+/)?.[0]))
+    .filter(Boolean)
+    .sort((a, b) => a - b);
+  const last = (migrations.at(-1) ?? 0) + 1;
+  return last - version;
+}
+
+/**
+ * This should be obvious... =D
+ */
+export async function initTestDatabase() {
+  if (!testing) return;
+
+  // Ensure the test database is up to date
+  await applyMigrations(join(dataPath, `test.sqlite3`));
+
+  const now = scrubDateTime(new Date().toISOString());
+
+  // Create an admin user
+  const admin = Models.User.findOrCreate({ name: `test admin` });
+  const admin_id = admin.id;
+  admin.enabled_at = now;
+  Models.User.save(admin);
+  Models.Admin.findOrCreate({ user_id: admin_id });
+
+  // And a regular user
+  const user = Models.User.findOrCreate({ name: `test user` });
+  const user_id = user.id;
+  user.enabled_at = now;
+  Models.User.save(user);
+
+  // Create a "starter" project
+  const starter = Models.Project.findOrCreate({
+    name: `test starter`,
+    description: `a starter project`,
+  });
+  Models.StarterProject.findOrCreate({ project_id: starter.id });
+
+  // Then create a project for our regular user and pretend
+  // that it was a remix of our "starter" project.
+  const project = Models.Project.findOrCreate({
+    name: `test project`,
+    description: `a test project`,
+  });
+  const project_id = project.id;
+  Models.ProjectSettings.findOrCreate({
+    project_id,
+    run_script: `npx http-server`,
+  });
+  Models.Access.findOrCreate({ project_id, user_id });
+  Models.Remix.findOrCreate({ original_id: starter.id, project_id });
+}
+
+/**
+ *
+ * @returns
+ */
+export function concludeTesting() {
+  if (!testing) return;
+  db.exec(`DELETE FROM users`);
+  db.exec(`DELETE FROM projects`);
+  db.exec(`DELETE FROM remix`);
+}

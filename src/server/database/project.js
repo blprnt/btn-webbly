@@ -38,8 +38,7 @@ const {
 
 // Ensure that the project slug is always up to date
 // based on the project name, which means updating
-// the insert and save functions. Everything else
-// falls through to those (including create):
+// several data-writing functions.
 (function enhanceProjectModel() {
   function runOp(operation, fields) {
     // ensure the slug is always correct

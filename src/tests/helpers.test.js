@@ -50,6 +50,7 @@ describe(`Helper function tests`, async () => {
     const listing = await Helpers.readContentDir(`./data`);
     assert.deepEqual(listing, [
       `migrations`,
+      `migrations/0002.js`,
       `migrations/0001.sql`,
       `schema.sql`,
       `sessions.sqlite3`,

@@ -6,7 +6,7 @@ import {
   initTestDatabase,
   concludeTesting,
   Models,
-} from "../../../server/database/models.js";
+} from "../../../server/database/index.js";
 
 import dotenv from "@dotenvx/dotenvx";
 const envPath = resolve(

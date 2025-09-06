@@ -4,13 +4,13 @@ import { resolve, join } from "node:path";
 import {
   initTestDatabase,
   concludeTesting,
-} from "../../../../../server/database/models.js";
+} from "../../../../../server/database/index.js";
 import * as User from "../../../../../server/database/user.js";
 import * as Middleware from "../../../../../server/routing/v1/users/middleware.js";
 
 import dotenv from "@dotenvx/dotenvx";
 const envPath = resolve(
-  join(import.meta.dirname, `..`, `..`, `..`, `..`, `..`, `..`, `.env`)
+  join(import.meta.dirname, `..`, `..`, `..`, `..`, `..`, `..`, `.env`),
 );
 dotenv.config({ quiet: true, path: envPath });
 

@@ -1,12 +1,28 @@
 import { unlinkSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { stopContainer, stopStaticServer } from "../docker/docker-helpers.js";
-import { CONTENT_DIR, pathExists } from "../../helpers.js";
+import { CONTENT_DIR, pathExists, slugify } from "../../helpers.js";
 import { Models } from "./models.js";
 import { getOwnedProjectsForUser } from "./project.js";
 
 const { User, Project, ProjectSettings, Access, Admin, UserSuspension, Login } =
   Models;
+
+// Ensure that the user slug is always up to date
+// based on the user name, which means updating
+// several data-writing functions.
+(function enhanceUserModel() {
+  function runOp(operation, fields) {
+    // ensure the slug is always correct
+    if (fields.name) fields.slug = slugify(fields.name);
+    return operation(fields);
+  }
+
+  [`insert`, `save`, `delete`, `findAll`].forEach((fn) => {
+    const original = User[fn].bind(User);
+    User[fn] = (fields) => runOp(original, fields);
+  });
+})();
 
 /**
  * ...docs go here...
