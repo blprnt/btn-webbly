@@ -4,12 +4,12 @@ First off: heck yes! You're a superhero already, thank you so much!
 
 But there's a bit of "legalese" we need to cover, because this might be the first open source project you're thinking of contributing to, and there's some "ego stripping" involved:
 
-- If you want to contribute code to this repository, you _will_ be acknowledge as a contributor, in the CONTRIBUTORS.md file
+- If you want to contribute to this repository, you _will_ be acknowledged as a contributor in the CONTRIBUTORS.md file.
 
 That doesn't sound too bad, but here's the flip side:
 
-- Any docs you write will not be attributed to you
-- Any code you contribute will not be attributed to you
+- Any docs you write will not be attributed to you, personally, and
+- any code you contribute will not be attributed to you, personally.
 
 Instead, your contributions become part of the codebase, and if people really want to know what specific thing you contributed, they can look at the git commit log, but you will not be credited for any specific thing, nor will you hold a copyright or any sort of ownership over the part(s) you contributed.
 
