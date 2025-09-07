@@ -6,6 +6,7 @@ import {
   bindCommonValues,
   loadProjectList,
   loadStarters,
+  noStaticHTML,
   pageNotFound,
 } from "./middleware.js";
 import { addPassportAuth } from "./auth/index.js";
@@ -89,7 +90,7 @@ export function setupRoutes(app) {
   );
 
   // static routes for the website itself
-  app.use(`/`, express.static(`public`, { etag: false }));
+  app.use(`/`, noStaticHTML, express.static(`public`, { etag: false }));
   app.use(`/default`, express.static(`content/default`, { etag: false }));
 
   // What do we do with a 404?

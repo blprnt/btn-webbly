@@ -10,4 +10,3 @@ content/*
 !content/__starter_projects
 !content/default
 data/data.sql
-data/v*

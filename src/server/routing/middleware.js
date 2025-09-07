@@ -31,6 +31,16 @@ export function nocache(req, res, next) {
 }
 
 /**
+ * ...docs go here...
+ */
+export function noStaticHTML(req, res, next) {
+  if (req.path.endsWith(".html") && !req.path.includes(`/default/`)) {
+    return next(new Error(`There is no HTML here`));
+  }
+  next();
+}
+
+/**
  * Send a 404
  * @param {*} req
  * @param {*} res
