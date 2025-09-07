@@ -28921,7 +28921,7 @@ async function getOrCreateFileEditTab(fileEntry, projectName5, filename) {
       view = create(`video`);
       view.controls = true;
     }
-    view.src = `/v1/files/${projectName5}/${filename}`;
+    view.src = `/v1/files/content/${projectName5}/${filename}`;
     panel.appendChild(view);
   }
   view.tabElement = tab;

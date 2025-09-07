@@ -141,7 +141,7 @@ export async function getOrCreateFileEditTab(fileEntry, projectName, filename) {
       view = create(`video`);
       view.controls = true;
     }
-    view.src = `/v1/files/${projectName}/${filename}`;
+    view.src = `/v1/files/content/${projectName}/${filename}`;
     panel.appendChild(view);
   }
 
