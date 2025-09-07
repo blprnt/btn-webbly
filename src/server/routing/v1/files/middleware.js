@@ -10,9 +10,10 @@ import {
 } from "node:fs";
 
 import { lstatSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { basename, dirname, extname, join, resolve } from "node:path";
 import { getAccessFor, MEMBER, touch } from "../../../database/index.js";
 import {
+  ROOT_DIR,
   CONTENT_DIR,
   createRewindPoint,
   execPromise,
@@ -23,21 +24,24 @@ import {
 } from "../../../../helpers.js";
 import { applyPatch } from "../../../../../public/vendor/diff.js";
 
+const contentDir = join(ROOT_DIR, CONTENT_DIR);
+
 /**
  * ...docs go gere,,,
  */
 export function createFile(req, res, next) {
-  const { lookups, fileName } = res.locals;
+  const { lookups, fullPath } = res.locals;
   const { project } = lookups;
   touch(project);
-  const slug = fileName.substring(fileName.lastIndexOf(`/`) + 1);
-  const dirs = fileName.replace(`/${slug}`, ``);
+  const fileName = basename(fullPath);
+  const dirs = dirname(fullPath);
   mkdirSync(dirs, { recursive: true });
-  if (!pathExists(fileName)) {
-    if (slug.includes(`.`)) {
-      writeFileSync(fileName, ``);
+  if (!pathExists(fullPath)) {
+    if (fileName.includes(`.`)) {
+      console.log(`writing out ${fullPath}`);
+      writeFileSync(fullPath, ``);
     } else {
-      mkdirSync(join(dirs, slug));
+      mkdirSync(join(dirs, fileName));
     }
   }
   createRewindPoint(project);
@@ -48,10 +52,9 @@ export function createFile(req, res, next) {
  * ...docs go here...
  */
 export async function deleteFile(req, res, next) {
-  const { lookups, fileName } = res.locals;
+  const { lookups, fullPath } = res.locals;
   const { project } = lookups;
   touch(project);
-  const fullPath = resolve(fileName);
   const isDir = lstatSync(fullPath).isDirectory();
   try {
     if (isDir) {
@@ -71,16 +74,19 @@ export async function deleteFile(req, res, next) {
  * ...docs go here...
  */
 export async function formatFile(req, res, next) {
-  const { lookups, fileName } = res.locals;
+  const { lookups, fullPath } = res.locals;
   const { project } = lookups;
   touch(project);
-  const ext = fileName.substring(fileName.lastIndexOf(`.`), fileName.length);
+  const ext = extname(fullPath);
 
   let formatted = false;
 
   if ([`.js`, `.css`, `.html`].includes(ext)) {
     try {
-      await execPromise(`${npm} run prettier -- ${fileName}`);
+      const output = await execPromise(
+        `${npm} run prettier:single -- "${fullPath}"`,
+      );
+      console.log(output);
       formatted = true;
     } catch (e) {
       return next(
@@ -91,7 +97,7 @@ export async function formatFile(req, res, next) {
 
   if ([`.py`].includes(ext)) {
     try {
-      await execPromise(`black ${fileName}`);
+      await execPromise(`black "${fullPath}"`);
       formatted = true;
     } catch (e) {
       return next(new Error(`Black could not format file:\n` + e.toString()));
@@ -111,32 +117,29 @@ export async function getDirListing(req, res, next) {
   const { user, lookups } = res.locals;
   const userName = user?.name;
   const { project } = lookups;
-  const projectSlug = project.slug;
 
-  if (projectSlug) {
-    const dirName = join(CONTENT_DIR, projectSlug);
+  const dirName = join(contentDir, project.slug);
 
-    let dir = await readContentDir(dirName);
-    if (dir === false) {
-      return next(new Error(`read dir didn't work??`));
-    }
-
-    // Remove any "private" data from the dir listing if
-    // the user has no access rights to them.
-    const accessLevel = userName ? getAccessFor(user, project) : -1;
-
-    // Users do not directly interact with the .container
-    // folder. Instead its content is regulated via the
-    // project settings.
-    dir = dir.filter((v) => !v.match(/^\.container\b/));
-
-    if (accessLevel < MEMBER) {
-      // private data is only visible to owners, editors, and
-      dir = dir.filter((v) => !v.match(/^\.data\b/));
-    }
-
-    res.locals.dir = dir;
+  let dir = await readContentDir(dirName);
+  if (dir === false) {
+    return next(new Error(`read dir didn't work??`));
   }
+
+  // Remove any "private" data from the dir listing if
+  // the user has no access rights to them.
+  const accessLevel = userName ? getAccessFor(user, project) : -1;
+
+  // Users do not directly interact with the .container
+  // folder. Instead its content is regulated via the
+  // project settings.
+  dir = dir.filter((v) => !v.match(/^\.container\b/));
+
+  if (accessLevel < MEMBER) {
+    // private data is only visible to owners, editors, and
+    dir = dir.filter((v) => !v.match(/^\.data\b/));
+  }
+
+  res.locals.dir = dir;
   next();
 }
 
@@ -144,11 +147,11 @@ export async function getDirListing(req, res, next) {
  * ...docs go here...
  */
 export function getMimeType(req, res, next) {
-  const { fileName } = res.locals;
-  const mimeType = mime.getType(fileName);
+  const { fullPath } = res.locals;
+  const mimeType = mime.getType(fullPath);
   res.locals = {
     mimeType,
-    data: readFileSync(fileName),
+    data: readFileSync(fullPath),
   };
   next();
 }
@@ -158,18 +161,16 @@ export function getMimeType(req, res, next) {
  * @returns
  */
 export function handleUpload(req, res, next) {
-  const { lookups, fileName } = res.locals;
+  const { lookups, fullPath } = res.locals;
   const { project } = lookups;
   touch(project);
-  const slug = fileName.substring(fileName.lastIndexOf(`/`) + 1);
-  const dirs = fileName.replace(`/${slug}`, ``);
   const fileData = req.body.content.value;
   const fileSize = fileData.length;
   if (fileSize > 10_000_000) {
     return next(new Error(`Upload size exceeded`));
   }
-  mkdirSync(dirs, { recursive: true });
-  writeFileSync(fileName, fileData, `ascii`);
+  mkdirSync(dirname(fullPath), { recursive: true });
+  writeFileSync(fullPath, fileData, `ascii`);
   createRewindPoint(project);
   next();
 }
@@ -178,14 +179,14 @@ export function handleUpload(req, res, next) {
  * ...docs go here...
  */
 export function patchFile(req, res, next) {
-  const { lookups, fileName } = res.locals;
+  const { lookups, fullPath } = res.locals;
   const { project } = lookups;
   touch(project);
-  let data = readFileSync(fileName).toString(`utf8`);
+  let data = readFileSync(fullPath).toString(`utf8`);
   const patch = req.body;
   const patched = applyPatch(data, patch);
-  if (patched) writeFileSync(fileName, patched);
-  res.locals.fileHash = `${getFileSum(project.slug, fileName, true)}`;
+  if (patched) writeFileSync(fullPath, patched);
+  res.locals.fileHash = `${getFileSum(project.slug, fullPath, true)}`;
   createRewindPoint(project);
   next();
 }
@@ -200,11 +201,11 @@ export async function moveFile(req, res, next) {
   const { slug } = project;
   const fileSlug = req.params.slug + req.params[0];
   const parts = fileSlug.split(`:`);
-  const oldPath = join(CONTENT_DIR, slug, parts[0]);
+  const oldPath = join(ROOT_DIR, CONTENT_DIR, slug, parts[0]);
   if (oldPath === `.`) {
     return next(new Error(`Illegal rename`));
   }
-  const newPath = join(CONTENT_DIR, slug, parts[1]);
+  const newPath = join(ROOT_DIR, CONTENT_DIR, slug, parts[1]);
   try {
     renameSync(oldPath, newPath);
     createRewindPoint(project);
