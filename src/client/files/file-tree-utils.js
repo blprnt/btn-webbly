@@ -67,8 +67,6 @@ function addFileTreeHandling() {
       fileTreeEntry.state = {};
     }
 
-    fileTreeEntry.setState(entry);
-
     const { tab, panel } = entry;
     entry.filename = key;
     if (tab) {
@@ -82,6 +80,8 @@ function addFileTreeHandling() {
     if (panel) {
       panel.title = panel.id = key;
     }
+
+    fileTreeEntry.setState(entry);
   }
 
   fileTree.addEventListener(`file:click`, async (evt) => {
