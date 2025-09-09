@@ -17,13 +17,16 @@ import {
   enableUser,
   getAllUsers,
   getUser,
+  getUserProfile,
   userIsAdmin,
   getUserSettings,
   getUserSuspensions,
   hasAccessToUserRecords,
   processUserLogin,
+  processUserSignup,
   suspendUser,
   unsuspendUser,
+  updateUserProfile,
 } from "./user.js";
 
 export {
@@ -32,13 +35,16 @@ export {
   enableUser,
   getAllUsers,
   getUser,
+  getUserProfile,
   userIsAdmin,
   getUserSettings,
   getUserSuspensions,
   hasAccessToUserRecords,
   processUserLogin,
+  processUserSignup,
   suspendUser,
   unsuspendUser,
+  updateUserProfile,
 };
 
 // Project related database functions
@@ -120,14 +126,20 @@ export async function initTestDatabase() {
   const now = scrubDateTime(new Date().toISOString());
 
   // Create an admin user
-  const admin = Models.User.findOrCreate({ name: `test admin` });
+  const admin = Models.User.findOrCreate({
+    name: `test admin`,
+    bio: `This is a test administrator account.`,
+  });
   const admin_id = admin.id;
   admin.enabled_at = now;
   Models.User.save(admin);
   Models.Admin.findOrCreate({ user_id: admin_id });
 
   // And a regular user
-  const user = Models.User.findOrCreate({ name: `test user` });
+  const user = Models.User.findOrCreate({
+    name: `test user`,
+    bio: `This is a normal user account.`,
+  });
   const user_id = user.id;
   user.enabled_at = now;
   Models.User.save(user);

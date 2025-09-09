@@ -4,7 +4,7 @@ import { passport } from "./middleware.js";
 import { Strategy as GitHubStrategy } from "passport-github2";
 import { Strategy as MagicLoginStrategy } from "passport-magic-link";
 import { loginWithGithub, handleGithubCallback, logout } from "./middleware.js";
-import { processUserLogin } from "../../database/index.js";
+import { processUserSignup, processUserLogin } from "../../database/index.js";
 
 // Explicit env loading as we rely on process.env
 // at the module's top level scope...
@@ -16,6 +16,10 @@ const githubSettings = {
   clientID: process.env.GITHUB_CLIENT_ID,
   clientSecret: process.env.GITHUB_CLIENT_SECRET,
   callbackURL: process.env.GITHUB_CALLBACK_URL,
+  // We need accss to req.session during auth,
+  // because signup vs. signin has different
+  // values stored in the request session.
+  passReqToCallback: true,
 };
 
 const magicSettings = {
@@ -38,14 +42,30 @@ export function addPassportAuth(app) {
 function addGithubAuth(app) {
   const githubStrategy = new GitHubStrategy(
     githubSettings,
-    (accessToken, refreshToken, profile, done) => {
-      const user = {
-        userName: profile.displayName,
+    (req, accessToken, refreshToken, profile, done) => {
+      const { username, slug } = req.session.reservedAccount ?? {};
+
+      const userObject = {
+        slug,
+        profileName: profile.displayName,
         service: profile.provider,
         service_id: profile.id,
       };
-      console.log(`running processUserLogin`);
-      return done(null, processUserLogin(user));
+
+      let user;
+
+      // If we have a user slug, this is a new account signup
+      if (userObject.slug) {
+        user = processUserSignup(username, userObject);
+      }
+
+      // If not, this is a log-in, where we need to find
+      // the user that belongs to this service profile.
+      else {
+        user = processUserLogin(userObject);
+      }
+
+      return done(null, user);
     },
   );
 

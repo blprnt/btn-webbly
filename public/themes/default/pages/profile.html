@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    {% set profileUser = lookups.user %}
+    {% set allowEdit = profile.ownProfile or user.admin%}
+    <title>Profile for {{ profileUser.name }}</title>
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="stylesheet" href="/themes/default/css/layout.css" />
+    <link rel="stylesheet" href="/themes/default/css/editor.css" />
+    <link rel="stylesheet" href="/themes/default/css/main.css" />
+    <link rel="stylesheet" href="/themes/default/css/profile.css" />
+  </head>
+  <body>
+    <h1>
+      Profile page for {{ profileUser.name }} {% if allowEdit %}
+      <button class="show-edit">edit</button>
+      {% endif %}
+    </h1>
+
+    <p>
+      <a href="/">Back to main</a>
+    </p>
+
+    <p>
+      {{ profileUser.name }} joined {{ profileUser.created_at | year }} and created {{ profile.projects.length
+      }} projects since then!
+    </p>
+
+    <section class="presentation">
+      <h2>Bio</h2>
+
+      <p>{{ profileUser.bio | para | safe }}</p>
+
+      <h2>Links</h2>
+
+      <ul class="links">
+        {% for link in profile.links %}
+        <li>{{ link.name }}: <a href="{{ link.url }}">{{ link.url }}</a></li>
+        {% endfor %}
+      </ul>
+    </section>
+
+    {% if allowEdit %}
+    <section class="hidden edit-form">
+      <form action="/v1/users/profile/{{ profileUser.slug }}" method="POST">
+        <fieldset>
+          <h2>Bio</h2>
+          <textarea name="bio">{{ profileUser.bio }}</textarea>
+        </fieldset>
+
+        <fieldset>
+          <h2>Links</h2>
+          <input type="button" class="add-link" value="add link" />
+          <ul class="links">
+            {% for link in profile.links %}
+            <li>
+              <label>{{ link.name }}</label>
+              <input type="hidden" name="linkNames" value="{{ link.name }}" />
+              <input type="url" name="linkHrefs" value="{{ link.url }}" />
+              <input type="hidden" name="linkOrder" value="{{ link.sort_order }}" />
+              <input type="button" class="remove-link" value="remove" />
+            </li>
+            {% endfor %}
+          </ul>
+        </fieldset>
+
+        <input type="reset" value="cancel" />
+        <input type="submit" value="save" />
+      </form>
+    </section>
+    {% endif %}
+
+    <h2>Projects</h2>
+
+    <ul>
+      {% if profile.ownProfile %} {% set ownProject = true %} {% endif %} {% for
+      project in profile.projects %} {% include "fragments/project-card.html" %}
+      {% endfor %}
+    </ul>
+
+    {% if user %}
+    <footer>
+      <a href="https://github.com/Pomax/make-webbly-things/issues">File issues here</a>
+    </footer>
+    {% endif %}
+
+    <script src="/themes/default/js/profile.js" async defer></script>
+  </body>
+</html>
