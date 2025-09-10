@@ -3,8 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    {% set profileUser = lookups.user %}
-    {% set allowEdit = profile.ownProfile or user.admin%}
+    {% set profileUser = lookups.user %} {% set allowEdit = profile.ownProfile
+    or user.admin%}
     <title>Profile for {{ profileUser.name }}</title>
     <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="stylesheet" href="/themes/default/css/layout.css" />
@@ -24,14 +24,14 @@
     </p>
 
     <p>
-      {{ profileUser.name }} joined {{ profileUser.created_at | year }} and created {{ profile.projects.length
-      }} projects since then!
+      {{ profileUser.name }} joined {{ profileUser.created_at | year }} and
+      created {{ profile.projects.length }} projects since then!
     </p>
 
     <section class="presentation">
       <h2>Bio</h2>
 
-      <p>{{ profileUser.bio | para | safe }}</p>
+      <div class="bio">{{ profileUser.bio | markdown | safe }}</div>
 
       <h2>Links</h2>
 
@@ -59,7 +59,11 @@
               <label>{{ link.name }}</label>
               <input type="hidden" name="linkNames" value="{{ link.name }}" />
               <input type="url" name="linkHrefs" value="{{ link.url }}" />
-              <input type="hidden" name="linkOrder" value="{{ link.sort_order }}" />
+              <input
+                type="hidden"
+                name="linkOrder"
+                value="{{ link.sort_order }}"
+              />
               <input type="button" class="remove-link" value="remove" />
             </li>
             {% endfor %}
@@ -82,7 +86,9 @@
 
     {% if user %}
     <footer>
-      <a href="https://github.com/Pomax/make-webbly-things/issues">File issues here</a>
+      <a href="https://github.com/Pomax/make-webbly-things/issues"
+        >File issues here</a
+      >
     </footer>
     {% endif %}
 
