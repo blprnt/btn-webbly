@@ -204,7 +204,7 @@ export function getUserProfile(user = {}, lookupUser) {
   return {
     user: lookupUser,
     links: UserLink.findAll({ user_id: lookupUser.id }, `sort_order`, `DESC`),
-    projects: getOwnedProjectsForUser(user),
+    projects: getOwnedProjectsForUser(lookupUser),
     ownProfile: user.id === lookupUser.id,
   };
 }
