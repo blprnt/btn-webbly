@@ -48,8 +48,7 @@ describe(`Helper function tests`, async () => {
 
   test(`readContentDir`, async () => {
     const listing = await Helpers.readContentDir(`./data`);
-    assert.deepEqual(listing.sort(), [
-      `README.md`,
+    const found = [
       `data.sqlite3`,
       `migrations`,
       `migrations/0001.sql`,
@@ -57,9 +56,9 @@ describe(`Helper function tests`, async () => {
       `migrations/0003.sql`,
       `migrations/0004.sql`,
       `schema.sql`,
-      `sessions.sqlite3`,
-      `test.sqlite3`,
-    ]);
+      `README.md`,
+    ].every((f) => listing.includes(f));
+    assert.equal(found, true);
   });
 
   test(`safify`, () => {

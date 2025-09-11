@@ -231,7 +231,11 @@ export function stopContainer(project, slug = project.slug) {
 export function stopStaticServer(project, slug = project.slug) {
   const { serverProcess } = portBindings[slug] ?? {};
   if (serverProcess) {
-    serverProcess.kill();
+    if (process.platform === "win32") {
+      execSync(`taskkill /pid ${serverProcess.pid} /f /t`);
+    } else {
+      serverProcess.kill(`SIGINT`);
+    }
     removeCaddyEntry(project);
   }
 }

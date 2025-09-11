@@ -1,5 +1,5 @@
 // -- Schema v3
- 
+
 import { slugify } from "../../src/helpers.js";
 
 /**
@@ -22,8 +22,8 @@ export default function update(data) {
 
   // and finally, make sure to add a new index, too.
   const index = `CREATE INDEX user_names ON users(name);\n`;
-  const newIndex = `CREATE INDEX user_slugs ON users(slug);\n`;
   const indexPos = data.indexOf(index) + index.length;
+  const newIndex = `CREATE INDEX user_slugs ON users(slug);\n`;
   data = data.substring(0, indexPos) + newIndex + data.substring(indexPos);
 
   // And then we're done here. Note that the `user_version`

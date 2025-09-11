@@ -1,4 +1,5 @@
 import { execSync } from "node:child_process";
+import { pathToFileURL } from "node:url";
 import { basename, dirname, join } from "node:path";
 import {
   cpSync,
@@ -27,6 +28,7 @@ export async function applyMigrations(dbPath) {
   if (version === 0) {
     const baseline = join(dbDir, `schema.sql`);
     execSync(`sqlite3 ${dbPath} ".read ${baseline}"`);
+    version = 1;
   }
 
   // Do we need to run any migrations?
@@ -57,7 +59,7 @@ export async function applyMigrations(dbPath) {
       // If not... uh... what? What is this?
       else {
         console.error(`
-There appears to be an invalid migration file in ./data/migrations?
+There appears to be an invalid migration file (${migration}) in ./data/migrations?
 
 Please have a look at what's going on there: I'm erroring out now.
 `);
@@ -102,8 +104,10 @@ export async function migrate(dbPath, migrationScript, migrationNumber) {
   const oldDb = join(dir, `v${migrationNumber}.${file}`);
   rmSync(sqlPath, { force: true });
   execSync(`sqlite3 ${dbPath} .dump > ${sqlPath}`);
-  let data = readFileSync(sqlPath).toString(`utf-8`);
-  const update = await import(migrationScript).then((lib) => lib.default);
+  let data = readFileSync(sqlPath).toString(`utf-8`).replaceAll(/\r\n/g, `\n`);
+  const update = await import(pathToFileURL(migrationScript)).then(
+    (lib) => lib.default,
+  );
   data = update(data) + `\n\PRAGMA user_version = ${migrationNumber + 1};\n`;
   writeFileSync(sqlPath, data);
   cpSync(dbPath, oldDb);

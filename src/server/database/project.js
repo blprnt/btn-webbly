@@ -71,7 +71,7 @@ export function getMostRecentProjects(projectCount) {
     select
       *
     from
-      projects 
+      projects
     left join
       starter_projects as strt
       on

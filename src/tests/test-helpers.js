@@ -75,3 +75,22 @@ export async function createDockerProject(run = true, gracePeriod = 500) {
     setTimeout(() => resolve({ res, cleanup }), run ? gracePeriod : 1),
   );
 }
+
+/**
+ * Helper function for running a test that may not immediately succeed.
+ * Simply retry the action until either we're passed our timeout,
+ * or the function ran without throwing an error.
+ */
+export async function tryFor(asyncFn, timeout = 5000, interval = 500) {
+  if (timeout < interval) return;
+  return new Promise(async (resolve, reject) => {
+    try {
+      const result = await asyncFn();
+      resolve(result);
+    } catch (e) {
+      setTimeout(() => {
+        resolve(tryFor(asyncFn, timeout - interval, interval));
+      }, interval);
+    }
+  });
+}

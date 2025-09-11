@@ -16,7 +16,7 @@ getAllRunningContainers()
     console.log(e.image);
     deleteContainerAndImage({ slug: e.image });
   });
-
+3;
 // And then do an "orphaned images" pass:
 execSync(`docker image list -a --no-trunc --format json`)
   .toString()
@@ -25,6 +25,8 @@ execSync(`docker image list -a --no-trunc --format json`)
   .map((e) => JSON.parse(e))
   .forEach((e) => {
     if (e.Repository.startsWith(`docker-project-`)) {
-      execSync(`docker image rm ${e.ID}`);
+      execSync(`docker image rm ${e.ID} -f`, {
+        stdio: `ignore`,
+      });
     }
   });
