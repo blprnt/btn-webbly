@@ -23,7 +23,11 @@ const {
   function runOp(operation, fields) {
     // ensure the slug is always correct
     if (fields.name) fields.slug = slugify(fields.name);
-    return operation(fields);
+    const admin = fields.admin;
+    delete fields.admin;
+    const result = operation(fields);
+    fields.admin = admin;
+    return result;
   }
 
   [`insert`, `save`, `delete`, `findAll`].forEach((fn) => {
