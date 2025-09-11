@@ -1,74 +1,124 @@
 import { Router } from "express";
 import { join } from "node:path";
+import { processUserSignup, processUserLogin } from "../../database/index.js";
+
 import { passport } from "./middleware.js";
 import { Strategy as GitHubStrategy } from "passport-github2";
+import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import { Strategy as MagicLoginStrategy } from "passport-magic-link";
-import { loginWithGithub, handleGithubCallback, logout } from "./middleware.js";
-import { processUserSignup, processUserLogin } from "../../database/index.js";
+import { Strategy as MastodonStrategy } from "passport-mastodon";
+
+import {
+  handleGithubCallback,
+  loginWithGithub,
+  handleGoogleCallback,
+  loginWithGoogle,
+  handleMastodonCallback,
+  loginWithMastodon,
+  logout,
+} from "./middleware.js";
+
+import {
+  googleSettings,
+  githubSettings,
+  magicSettings,
+  mastodonSettings,
+  validProviders,
+  getServiceDomain,
+} from "./settings.js";
 
 // Explicit env loading as we rely on process.env
 // at the module's top level scope...
 import dotenv from "@dotenvx/dotenvx";
+import { addLoginProviderForUser } from "../../database/user.js";
 const envPath = join(import.meta.dirname, `../../../../.env`);
 dotenv.config({ path: envPath, quiet: true });
+const { WEB_EDITOR_HOSTNAME } = process.env;
 
-const githubSettings = {
-  clientID: process.env.GITHUB_CLIENT_ID,
-  clientSecret: process.env.GITHUB_CLIENT_SECRET,
-  callbackURL: process.env.GITHUB_CALLBACK_URL,
-  // We need accss to req.session during auth,
-  // because signup vs. signin has different
-  // values stored in the request session.
-  passReqToCallback: true,
-};
+/**
+ * Is this a provider that we actually have auth for?
+ */
+export function validAuthProvider(provider) {
+  return validProviders.includes(provider);
+}
 
-const magicSettings = {
-  secret: process.env.MAGIC_LINK_SECRET,
-  userFields: ["email"],
-  tokenField: "token",
-  verifyUserAfterToken: true,
-};
-
+/**
+ * Set up all auth methods for this platform.
+ */
 export function addPassportAuth(app) {
   app.use(passport.initialize());
   app.use(passport.session());
+  addGoogleAuth(app);
   addGithubAuth(app);
   addEmailAuth(app);
+  addMastodonAuth(app);
+  app.use(`/auth/logout`, (req, res, next) =>
+    req.logout((err) => {
+      if (err) return next(err);
+      res.redirect(`/`);
+    }),
+  );
+}
+
+/**
+ * ...docs go here...
+ * @param {*} req
+ * @param {*} accessToken
+ * @param {*} refreshToken
+ * @param {*} profile
+ * @param {*} done
+ * @returns
+ */
+export function processOAuthLogin(
+  req,
+  accessToken,
+  refreshToken,
+  profile,
+  done,
+) {
+  const { user: sessionUser } = req.session.passport ?? {};
+
+  // Are there special circumstances surrounding this callback?
+  const { username, slug, newProvider } = req.session.reservedAccount ?? {};
+  delete req.session.reservedAccount;
+  req.session.save();
+
+  const userObject = {
+    profileName: profile.displayName,
+    service: profile.provider,
+    service_id: profile.id,
+    service_domain: getServiceDomain(profile.provider),
+  };
+
+  let user;
+
+  // If we have a user slug, this is a new account signup
+  if (username && slug) {
+    user = processUserSignup(username, userObject);
+  }
+
+  // If we have a new provider name, we need to add this
+  // as an additional login provider for this user's account
+  else if (newProvider) {
+    user = addLoginProviderForUser(sessionUser, userObject);
+  }
+
+  // If not, this is a regular login, where we need to find
+  // the user that belongs to this service profile.
+  else {
+    user = processUserLogin(userObject);
+  }
+
+  return done(null, user);
 }
 
 /**
  * Set up github auth
  */
-function addGithubAuth(app) {
-  const githubStrategy = new GitHubStrategy(
-    githubSettings,
-    (req, accessToken, refreshToken, profile, done) => {
-      const { username, slug } = req.session.reservedAccount ?? {};
+export function addGithubAuth(app, settings = githubSettings) {
+  if (!settings) return;
 
-      const userObject = {
-        slug,
-        profileName: profile.displayName,
-        service: profile.provider,
-        service_id: profile.id,
-      };
-
-      let user;
-
-      // If we have a user slug, this is a new account signup
-      if (userObject.slug) {
-        user = processUserSignup(username, userObject);
-      }
-
-      // If not, this is a log-in, where we need to find
-      // the user that belongs to this service profile.
-      else {
-        user = processUserLogin(userObject);
-      }
-
-      return done(null, user);
-    },
-  );
-
+  const githubStrategy = new GitHubStrategy(settings, processOAuthLogin);
   passport.use(githubStrategy);
 
   const github = Router();
@@ -82,13 +132,53 @@ function addGithubAuth(app) {
 }
 
 /**
+ * Set up google auth
+ */
+export function addGoogleAuth(app, settings = googleSettings) {
+  if (!settings) return;
+
+  const googleStrategy = new GoogleStrategy(settings, processOAuthLogin);
+  passport.use(googleStrategy);
+
+  const google = Router();
+  google.get(`/error`, (req, res) => res.send(`Unknown Error`));
+  google.get(`/callback`, handleGoogleCallback, (req, res) =>
+    res.redirect(`/`),
+  );
+  google.get(`/logout`, logout);
+  google.get(`/`, loginWithGoogle);
+  app.use(`/auth/google`, google);
+}
+
+/**
+ * Set up mastodon auth
+ */
+export function addMastodonAuth(app, settings = mastodonSettings) {
+  if (!settings) return;
+
+  const mastodonStrategy = new MastodonStrategy(settings, processOAuthLogin);
+  passport.use(mastodonStrategy);
+
+  const mastodon = Router();
+  mastodon.get(`/error`, (req, res) => res.send(`Unknown Error`));
+  mastodon.get(`/callback`, handleMastodonCallback, (req, res) =>
+    res.redirect(`/`),
+  );
+  mastodon.get(`/logout`, logout);
+  mastodon.get(`/`, loginWithMastodon);
+  app.use(`/auth/mastodon`, mastodon);
+}
+
+/**
  * Set up magic link auth
  */
-function addEmailAuth(app) {
+export function addEmailAuth(app, settings = magicSettings) {
+  if (!settings) return;
+
   const magicStrategy = new MagicLoginStrategy(
-    magicSettings,
+    settings,
     function send(user, token) {
-      const url = `https://${process.env.WEB_EDITOR_HOSTNAME}/auth/email/verify?token=${token}`;
+      const url = `https://${WEB_EDITOR_HOSTNAME}/auth/email/verify?token=${token}`;
       console.log(`send:`, user, url);
       user = {
         userName: user.email,

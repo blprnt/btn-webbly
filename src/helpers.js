@@ -203,6 +203,7 @@ export function slugify(text) {
     .basify(text.replaceAll(`..`, `LOL_YEAH_NO`))
     .toLowerCase()
     .replace(/\s+/g, `-`)
+    .replace(/[<>]/g, ``)
     .replace(
       /[\u0021-\u002C\u002E-\u002F\u003A-\u0040\u005B-\u0060\u007B-\u00BF]+/g,
       ``,

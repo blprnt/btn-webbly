@@ -41,38 +41,71 @@
 
 <h2>Log in</h2>
 
-<p>If the above all sounds reasonable, then you'll probably want to either:</p>
+<p>If you already have an account, just log in:</p>
 
 <ul>
-  <li>
-    <form id="signup" method="POST">
-      <button disabled>Sign up as:</button>
-      <input type="text" placeholder="Write your username here" />
-      <span></span>
-    </form>
-    <p>
-      (You'll be redirected to a GitHub auth flow after picking a user name)
-    </p>
-  </li>
+  {% for entry in availableProviders %}
+    <li>
+      using
+      <a href="/auth/{{ entry.service }}"
+        >{{ entry.service_domain or entry.service }}</a
+      >
+    </li>
+  {% endfor %}
+  {% if LOCAL_DEV_TESTING === "true" %}
+    <li>
+      <form action="/auth/email" method="post">
+        Or, <button>fake</button> an
+        <input type="email" name="email" placeholder="email" /> signin.
+      </form>
+      <p>
+        Note that this second option only exists to do user testing<br />
+        with fake users, and doesn't actually send out any emails.<br />
+        The activation link gets logged to the console.
+      </p>
+    </li>
+  {% endif %}
 </ul>
 
-<p>or log in:</p>
+<p>
+  But if you don't, and the above all sounds reasonable, then you'll probably
+  want to sign up.
+</p>
 
 <ul>
-  <li>using <a href="/auth/github">GitHub</a></li>
-  {% if LOCAL_DEV_TESTING === "true" %}
-  <li>
-    <form action="/auth/email" method="post">
-      Or, <button>fake</button> an
-      <input type="email" name="email" placeholder="email" /> signin.
+  <li class="full-width">
+    <form id="signup" method="POST">
+      <p>
+        <label>Step 1: pick a username:</label>
+        <input type="text" placeholder="Write your username here" />
+        <br />
+        <span style="color: red"></span>
+      </p>
+      <p>
+        Step 2: pick which auth service you want to be your primary login
+        method:
+        {% for entry in availableProviders %}
+          <button class="provider" data-name="{{ entry.service }}" disabled>
+            {{ entry.service_domain or entry.service }}
+          </button>
+        {% endfor %}
+      </p>
     </form>
+
+    <hr />
+
     <p>
-      Note that this second option only exists to do user testing<br />
-      with fake users, and doesn't actually send out any emails.<br />
-      The activation link gets logged to the console.
+      Note that your user name is "what you want people to see". Whether you
+      will be able to register that will be based on whether or not that name's
+      "slug" equivalent (i.e. a url-safe equivalent) is already taken or not.
+    </p>
+
+    <p>
+      Also note that you can add additional authentication methods once your
+      account has been enabled, so that even if you lose access to a service,
+      you're not suddenly also locked out of your account here.
     </p>
   </li>
-  {% endif %}
 </ul>
 
 <p>
@@ -114,15 +147,15 @@
   Accounts are created in a "disabled" state, requiring an admin to enable them
   before they can actually use the editor (beyond what anonymous visitors can
   do). If we know each other, shoot me a message saying you signed up and I'll
-  immediately enable your account, but if I have no idea who you are, trust me
-  to hit the delete button: you want to run your own instance, instead.
+  immediately enable your account, but if I have no idea who you are, it's quite
+  likely that I'll just delete your account...
 </p>
 
 <p>
-  In fact, that's the main selling point (except of course, it's free open
-  source software =D) of this platform: you don't need my approval, just go run
-  your own copy and have fun with it. Let your friends join that one, and have a
-  good time on the interwebs.
+  In fact, that's the main selling point of this platform:
+  <em>you don't need my approval</em> to use it, just go run your own instance
+  and have fun with it. Let your friends join that one, and have a good time on
+  the interwebs.
 </p>
 
 <h2>Starter projects</h2>
@@ -145,27 +178,28 @@
 </p>
 
 {% if projectList %}
-<h2>What are folks doing on this instance?</h2>
+  <h2>What are folks doing on this instance?</h2>
 
-<p>
-  If you just want to see some cool stuff that's happening on this instance,
-  here are the five most recent projects that people have been working on. You
-  can fire each of them up in the editor view (although of course as a random
-  visitor you will not be able to edit anything), or you can open the associated
-  websites by clicking the link at the bottom of each project card.
-</p>
+  <p>
+    If you just want to see some cool stuff that's happening on this instance,
+    here are the five most recent projects that people have been working on. You
+    can fire each of them up in the editor view (although of course as a random
+    visitor you will not be able to edit anything), or you can open the
+    associated websites by clicking the link at the bottom of each project card.
+  </p>
 
-<p>
-  Note that not all projects may be running, but if they are: those are not
-  screenshots, you're looking at the websites running as an embed. And if
-  they're interactive, you can interact with them. Or you can open them in their
-  own tab to experience them as proper, full website, of course!
-</p>
+  <p>
+    Note that not all projects may be running, but if they are: those are not
+    screenshots, you're looking at the websites running as an embed. And if
+    they're interactive, you can interact with them. Or you can open them in
+    their own tab to experience them as proper, full website, of course!
+  </p>
 
-<ul>
-  {% for project in projectList %} {% include "fragments/project-card.html" %}
-  {% endfor %}
-</ul>
+  <ul>
+    {% for project in projectList %}
+      {% include "fragments/project-card.html" %}
+    {% endfor %}
+  </ul>
 {% endif %}
 
 <h2>Is this open source?</h2>
@@ -202,3 +236,5 @@
   Run your own instance and you can customize the look and feel to your heart's
   content. After all, <a href="https://csszengarden.com">it's just CSS</a>!
 </p>
+
+<script src="/themes/default/js/signup.js" async defer></script>

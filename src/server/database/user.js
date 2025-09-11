@@ -4,6 +4,7 @@ import { stopContainer, stopStaticServer } from "../docker/docker-helpers.js";
 import { CONTENT_DIR, pathExists, slugify } from "../../helpers.js";
 import { Models } from "./models.js";
 import { getOwnedProjectsForUser } from "./project.js";
+import { getServiceDomain, validProviders } from "../routing/auth/settings.js";
 
 const {
   User,
@@ -51,7 +52,7 @@ export function processUserSignup(username, userObject) {
   } catch (e) {
     // this is what we want: "error: no user found".
   }
-  const { service, service_id } = userObject;
+  const { service, service_id, service_domain } = userObject;
   const existingLogin = Login.find({ service, service_id });
   if (existingLogin) {
     // Nice try, but you only get one user account
@@ -60,7 +61,7 @@ export function processUserSignup(username, userObject) {
   }
   // Unknown user, and unknown service login: create a new account!
   const user = User.create({ name: username });
-  Login.create({ user_id: user.id, service, service_id });
+  Login.create({ user_id: user.id, service, service_id, service_domain });
   return user;
 }
 
@@ -108,14 +109,27 @@ function processUserLoginNormally(userObject) {
 function __processFirstTimeUserLogin(userObject) {
   unlinkSync(firstTimeSetup);
   __processUserLogin = processUserLoginNormally;
-  const { profileName, service, service_id } = userObject;
+  const { profileName, service, service_id, service_domain } = userObject;
   console.log(`First time login: marking ${profileName} as admin`);
   const user = User.create({ name: profileName });
-  Login.create({ user_id: user.id, service, service_id });
+  Login.create({ user_id: user.id, service, service_id, service_domain });
   Admin.create({ user_id: user.id });
   user.enabled_at = user.created_at;
   user.admin = true;
   User.save(user);
+  return user;
+}
+
+/**
+ * Add a login provider for a user account
+ */
+export function addLoginProviderForUser(user, userObject) {
+  const { service, service_id, service_domain } = userObject;
+  let login = Login.find({ user_id: user.id, service });
+  if (login) {
+    return processUserLoginNormally(userObject);
+  }
+  Login.create({ user_id: user.id, service, service_id, service_domain });
   return user;
 }
 
@@ -204,12 +218,30 @@ export function getUser(userSlugOrId) {
 /**
  * ...docs go here...
  */
+export function getUserLoginServices(user) {
+  return Login.findAll({ user_id: user.id });
+}
+
+/**
+ * ...docs go here...
+ */
 export function getUserProfile(user = {}, lookupUser) {
+  const ownProfile = user.id === lookupUser.id;
+  const services = ownProfile ? getUserLoginServices(user) : undefined;
+  const serviceNames = services?.map((s) => s.service);
+  const additionalServices = validProviders
+    .filter((e) => !serviceNames?.includes(e))
+    .map((e) => ({
+      service: e,
+      service_domain: getServiceDomain(e),
+    }));
   return {
     user: lookupUser,
     links: UserLink.findAll({ user_id: lookupUser.id }, `sort_order`, `DESC`),
     projects: getOwnedProjectsForUser(lookupUser),
-    ownProfile: user.id === lookupUser.id,
+    services,
+    additionalServices,
+    ownProfile,
   };
 }
 
@@ -253,6 +285,17 @@ export function hasAccessToUserRecords(user, targetUser) {
   const a = Admin.find({ user_id: user.id });
   if (!a) return false;
   return true;
+}
+
+/**
+ * ...docs go here...
+ */
+export function removeAuthProvider(user, service) {
+  const logins = Login.findAll({ user_id: user.id }).length;
+  if (logins > 1) {
+    const login = Login.find({ user_id: user.id, service });
+    if (login) Login.delete(login);
+  }
 }
 
 /**
