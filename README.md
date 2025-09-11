@@ -76,7 +76,7 @@ No of course not: it's just web pages, so you can change the templates and CSS t
 
 ## Alright, I'm sold, how do I install this on my own computer?
 
-1. It's a node project, so you'll need that installed (I recommend `nvm` or its windows equivalent).
+1. It's a node project, so you'll need that installed (I recommend `nvm` or its windows equivalent). Specifically, you will need Node version 24 or newer.
 1. You'll also need `git` installed. Normally that goes without saying, but in this case we're also using it as an under-the-hood tool for performing version control for project content so you can't just copy this repo's source code, you _need_ `git` installed properly.
 1. You'll also need docker installed, which has different instructions depending on the OS you're using.
 1. And you'll want `caddy` installed, for reverse-proxying container ports so you can just load https://projectname.localhost
@@ -152,7 +152,9 @@ You can now run `caddy` anywhere.
 
 ### So then what?
 
-Clone the repo, and then run `node setup`. Once that's done, you're good to go and you can simply run `npm start` any time you want to run the system.
+Clone the repo, run `npm install`, and then run `node setup`.
+
+Once that's done, you're good to go and you can simply run `npm start` any time you want to run the system.
 
 ### One-time Caddy permissions
 
