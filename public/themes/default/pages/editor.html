@@ -26,7 +26,7 @@
       <span id="buttons">
         <a class="link-back" href="https://{{ WEB_EDITOR_HOSTNAME }}">home</a>
         <span class="projectname">{{ project.name }}</span>
-        {% if user %}
+        {% if user and user.enabled_at %}
           <button id="download" title="Download project files">💾</button>
           <a
             title="Remix this project!"
