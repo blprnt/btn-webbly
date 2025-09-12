@@ -23,11 +23,13 @@ The server code is further split up into the following logical folders:
 
 ## End points vs. middleware vs. functionality
 
-The routing code is split up into three disctinc parts, each with their own roles:
+The request handling code is structured as three different levels of abstraction, following the standard Express.js methodology:
 
 ### endpoints
 
-Endpoints are route-servicing code that set up GET or POST responses, and whose only job is to says which route they're servicing, and which series of operations need to be performed in order to form a response. Endpoint code should not be "doing" anything itself.
+Endpoints are written as route-servicing code that receive GET or POST requests and then form responses for those. This code's only job is to says which route is being serviced, using what HTTP verb, and which series of operations will need to be performed in order for a response to be sent back.
+
+Endpoint code should never be "doing" anything itself, except for sending the final response (which could be any kind of data)
 
 ### Middleware
 

@@ -159,12 +159,21 @@ function verifyRIFF(bytes) {
 
 // src/client/preview/preview.js
 var restart = document.querySelector(`#preview-buttons .restart`);
+var pause = document.querySelector(`#preview-buttons .pause`);
 var newtab = document.querySelector(`#preview-buttons .newtab`);
 var preview = document.getElementById(`preview`);
 var { projectSlug } = document.body.dataset;
 var failures = 0;
 var first_time_load = 0;
+var refresh = true;
+if (pause) {
+  pause.addEventListener(`click`, () => {
+    refresh = !refresh;
+    pause.textContent = refresh ? `pause` : `refresh`;
+  });
+}
 async function updatePreview() {
+  if (!refresh) return;
   const iframe = preview.querySelector(`iframe`);
   const newFrame = document.createElement(`iframe`);
   if (first_time_load++ < 10) {
@@ -9362,9 +9371,9 @@ var ViewState = class {
     let oracle = this.heightOracle;
     let whiteSpace = style.whiteSpace;
     this.defaultTextDirection = style.direction == "rtl" ? Direction.RTL : Direction.LTR;
-    let refresh = this.heightOracle.mustRefreshForWrapping(whiteSpace);
+    let refresh2 = this.heightOracle.mustRefreshForWrapping(whiteSpace);
     let domRect = dom.getBoundingClientRect();
-    let measureContent = refresh || this.mustMeasureContent || this.contentDOMHeight != domRect.height;
+    let measureContent = refresh2 || this.mustMeasureContent || this.contentDOMHeight != domRect.height;
     this.contentDOMHeight = domRect.height;
     this.mustMeasureContent = false;
     let result = 0, bias = 0;
@@ -9374,7 +9383,7 @@ var ViewState = class {
         this.scaleX = scaleX;
         this.scaleY = scaleY;
         result |= 16;
-        refresh = measureContent = true;
+        refresh2 = measureContent = true;
       }
     }
     let paddingTop = (parseInt(style.paddingTop) || 0) * this.scaleY;
@@ -9416,11 +9425,11 @@ var ViewState = class {
     if (measureContent) {
       let lineHeights = view.docView.measureVisibleLineHeights(this.viewport);
       if (oracle.mustRefreshForHeights(lineHeights))
-        refresh = true;
-      if (refresh || oracle.lineWrapping && Math.abs(contentWidth - this.contentDOMWidth) > oracle.charWidth) {
+        refresh2 = true;
+      if (refresh2 || oracle.lineWrapping && Math.abs(contentWidth - this.contentDOMWidth) > oracle.charWidth) {
         let { lineHeight, charWidth, textHeight } = view.docView.measureTextSize();
-        refresh = lineHeight > 0 && oracle.refresh(whiteSpace, lineHeight, charWidth, textHeight, Math.max(5, contentWidth / charWidth), lineHeights);
-        if (refresh) {
+        refresh2 = lineHeight > 0 && oracle.refresh(whiteSpace, lineHeight, charWidth, textHeight, Math.max(5, contentWidth / charWidth), lineHeights);
+        if (refresh2) {
           view.docView.minWidth = 0;
           result |= 16;
         }
@@ -9432,7 +9441,7 @@ var ViewState = class {
       clearHeightChangeFlag();
       for (let vp of this.viewports) {
         let heights = vp.from == this.viewport.from ? lineHeights : view.docView.measureVisibleLineHeights(vp);
-        this.heightMap = (refresh ? HeightMap.empty().applyChanges(this.stateDeco, Text.empty, this.heightOracle, [new ChangedRange(0, 0, 0, view.state.doc.length)]) : this.heightMap).updateHeight(oracle, 0, refresh, new MeasuredHeights(vp.from, heights));
+        this.heightMap = (refresh2 ? HeightMap.empty().applyChanges(this.stateDeco, Text.empty, this.heightOracle, [new ChangedRange(0, 0, 0, view.state.doc.length)]) : this.heightMap).updateHeight(oracle, 0, refresh2, new MeasuredHeights(vp.from, heights));
       }
       if (heightChangeFlag)
         result |= 2;
@@ -9447,7 +9456,7 @@ var ViewState = class {
     if (result & 2 || viewportChange)
       this.updateViewportLines();
     if (this.lineGaps.length || this.viewport.to - this.viewport.from > 2e3 << 1)
-      this.updateLineGaps(this.ensureLineGaps(refresh ? [] : this.lineGaps, view));
+      this.updateLineGaps(this.ensureLineGaps(refresh2 ? [] : this.lineGaps, view));
     result |= this.computeVisibleRanges();
     if (this.mustEnforceCursorAssoc) {
       this.mustEnforceCursorAssoc = false;

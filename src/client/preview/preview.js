@@ -1,6 +1,7 @@
 import { API } from "../utils/api.js";
 
 const restart = document.querySelector(`#preview-buttons .restart`);
+const pause = document.querySelector(`#preview-buttons .pause`);
 const newtab = document.querySelector(`#preview-buttons .newtab`);
 const preview = document.getElementById(`preview`);
 const { projectSlug } = document.body.dataset;
@@ -8,10 +9,22 @@ const { projectSlug } = document.body.dataset;
 let failures = 0;
 let first_time_load = 0;
 
+let refresh = true;
+
+if (pause) {
+  pause.addEventListener(`click`, () => {
+    refresh = !refresh;
+    pause.textContent = refresh ? `pause` : `refresh`;
+    if (refresh) updatePreview();
+  });
+}
+
 /**
  * update the <graphics-element> based on the current file content.
  */
 export async function updatePreview() {
+  if (!refresh) return;
+
   const iframe = preview.querySelector(`iframe`);
   const newFrame = document.createElement(`iframe`);
 
