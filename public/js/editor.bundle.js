@@ -170,6 +170,7 @@ if (pause) {
   pause.addEventListener(`click`, () => {
     refresh = !refresh;
     pause.textContent = refresh ? `pause` : `refresh`;
+    if (refresh) updatePreview();
   });
 }
 async function updatePreview() {

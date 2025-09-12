@@ -77,7 +77,7 @@ export async function checkProjectHealth(req, res, next) {
  * ...docs go here...
  */
 function cloneProject(project, slug, isStarter) {
-  const source = project.slug;
+  let source = project.slug;
   const dir = join(CONTENT_DIR, slug);
   const tempDir = join(CONTENT_DIR, `__${slug}`);
 
