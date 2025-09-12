@@ -29944,7 +29944,7 @@ function addFileTreeHandling() {
           const content3 = new TextDecoder().decode(arrayBuffer);
           if (content3.trim()) {
             path2 = basePath + path2;
-            uploadFile(path2, content3, () => fileTree2.addEntry(path2));
+            uploadFile(path2, content3, () => fileTree2.createEntry(path2));
           }
         }
       } else {

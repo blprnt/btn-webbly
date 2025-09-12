@@ -115,7 +115,7 @@ function addFileTreeHandling() {
           const content = new TextDecoder().decode(arrayBuffer);
           if (content.trim()) {
             path = basePath + path;
-            uploadFile(path, content, () => fileTree.addEntry(path));
+            uploadFile(path, content, () => fileTree.createEntry(path));
           }
         }
       } else {

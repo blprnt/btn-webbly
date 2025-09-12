@@ -64,7 +64,7 @@ html {
           border-radius: 4px;
           margin-left: 0.25em;
         }
-       
+
         button {
           height: 1.75em;
           cursor: pointer;
@@ -210,21 +210,6 @@ html {
           background: #ececec;
           margin-bottom: 0.25em;
         }
-      }
-
-      #status {
-        background: #eee;
-        padding: 0.25em 0.5em 0.25em;
-        font-family: sans-serif;
-        font-style: italic;
-        border: 1px solid gray;
-        border-bottom: none;
-        margin-top: 3px;
-        /* hmm */
-        position: fixed;
-        bottom: 0;
-        right: 1px;
-        left: 0;
       }
     }
   }

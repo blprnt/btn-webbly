@@ -1,15 +1,13 @@
 main {
-  --status-height: 2em;
   --div-width: 1em;
   display: grid;
   grid-template-columns: min-content min-content 1fr;
-  grid-template-rows: min-content 1fr var(--status-height);
+  grid-template-rows: min-content 1fr;
   gap: 0;
   grid-column-gap: 3px;
   grid-template-areas:
     "buttons   tabnav   preview"
-    "filetree  editors  preview"
-    "status    status   status";
+    "filetree  editors  preview";
 }
 
 #tabnav {
@@ -32,12 +30,6 @@ main {
   padding: 0;
   overflow: auto;
   resize: horizontal;
-}
-
-#status {
-  grid-area: status;
-  margin: 0;
-  padding: 0;
 }
 
 #left {
