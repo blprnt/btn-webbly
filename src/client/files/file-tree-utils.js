@@ -109,8 +109,31 @@ function addFileTreeHandling() {
     if (content) {
       if (path.endsWith(`.zip`) && confirm(`Unpack zip file?`)) {
         const basePath = path.substring(0, path.lastIndexOf(`/`) + 1);
-        const { entries } = await unzip(new Uint8Array(content).buffer);
-        for await (let [path, entry] of Object.entries(entries)) {
+        let { entries } = await unzip(new Uint8Array(content).buffer);
+
+        entries = Object.entries(entries).map(([path, entry]) => ({
+          path,
+          entry,
+        }));
+
+        // Is this a "single dir that houses the actual content" zip?
+        const prefix = (function findPrefix() {
+          let a = entries[0].path;
+          if (!a.includes(`/`)) return;
+          a = a.substring(0, a.indexOf(`/`) + 1);
+          if (entries.every((e) => e.path.startsWith(a))) return a;
+        })();
+
+        if (
+          prefix &&
+          confirm(
+            `Unpack into the root, rather than "${prefix.substring(0, prefix.length - 1)}"?`,
+          )
+        ) {
+          entries.forEach((e) => (e.path = e.path.replace(prefix, ``)));
+        }
+
+        for await (let { path, entry } of entries) {
           const arrayBuffer = await entry.arrayBuffer();
           const content = new TextDecoder().decode(arrayBuffer);
           if (content.trim()) {

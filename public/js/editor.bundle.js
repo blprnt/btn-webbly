@@ -29938,8 +29938,23 @@ function addFileTreeHandling() {
     if (content2) {
       if (path.endsWith(`.zip`) && confirm(`Unpack zip file?`)) {
         const basePath = path.substring(0, path.lastIndexOf(`/`) + 1);
-        const { entries } = await unzip(new Uint8Array(content2).buffer);
-        for await (let [path2, entry] of Object.entries(entries)) {
+        let { entries } = await unzip(new Uint8Array(content2).buffer);
+        entries = Object.entries(entries).map(([path2, entry]) => ({
+          path: path2,
+          entry
+        }));
+        const prefix = (function findPrefix() {
+          let a = entries[0].path;
+          if (!a.includes(`/`)) return;
+          a = a.substring(0, a.indexOf(`/`) + 1);
+          if (entries.every((e2) => e2.path.startsWith(a))) return a;
+        })();
+        if (prefix && confirm(
+          `Unpack into the root, rather than "${prefix.substring(0, prefix.length - 1)}"?`
+        )) {
+          entries.forEach((e2) => e2.path = e2.path.replace(prefix, ``));
+        }
+        for await (let { path: path2, entry } of entries) {
           const arrayBuffer = await entry.arrayBuffer();
           const content3 = new TextDecoder().decode(arrayBuffer);
           if (content3.trim()) {

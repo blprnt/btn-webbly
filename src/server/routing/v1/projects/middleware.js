@@ -59,10 +59,14 @@ import { runProject } from "../../../database/project.js";
  */
 export async function checkProjectHealth(req, res, next) {
   const { project } = res.locals.lookups;
-  if (project.settings.app_type === `static`) {
+  const binding = portBindings[project.slug];
+  if (!binding) {
+    res.locals.healthStatus = `failed`;
+    return next();
+  }
+  if (binding.serverProcess) {
     try {
-      const { port } = portBindings[project.slug];
-      await fetch(`http://localhost:${port}`);
+      await fetch(`http://localhost:${binding.port}`);
       res.locals.healthStatus = `ready`;
     } catch (e) {
       res.locals.healthStatus = `failed`;
