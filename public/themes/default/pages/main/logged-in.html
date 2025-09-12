@@ -32,15 +32,16 @@
     <h2>Your projects:</h2>
 
     <ul>
-      {% for project in projectList %}{% set ownProject = true %}
-      {%
-        include
-        "fragments/project-card.html"
-      %}{% endfor %}
+      {% for project in projectList %}
+        {% set ownProject = true %}
+        {%
+          include
+          "fragments/project-card.html"
+        %}
+      {% endfor %}
     </ul>
   {% endif %}
 {% endif %}
-
 {% include "fragments/settings.html" %}
 
 <footer>

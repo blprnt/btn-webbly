@@ -21,7 +21,7 @@ The server code is further split up into the following logical folders:
 - `./src/server/pages` is where all the nunjucks-templated HTML lives, with fragments in the `fragments` subfolder
 - `./src/server/routing` is where all the server route information can be found. If it has a URL, resolution for that URL can be found here.
 
-## End points vs. middleware vs. functionality 
+## End points vs. middleware vs. functionality
 
 The routing code is split up into three disctinc parts, each with their own roles:
 
@@ -35,18 +35,16 @@ Middleware is responsible for taking care of one step in a multi step process. F
 
 ### Functional code
 
-Middleware might need to load a project, but the way it does that is by first making sure that that all preconditions are met, and then calling "whatever is responsible for project code". In this specific example, that's the `database/project.js` code. 
+Middleware might need to load a project, but the way it does that is by first making sure that that all preconditions are met, and then calling "whatever is responsible for project code". In this specific example, that's the `database/project.js` code.
 
-So putting it all together: the endpoints define which steps must complete in order to form a response to a URL call, middleware is responsible for meeting each step, which it does by making sure all preconditions are met to run "The real code", which is found in their own files. 
+So putting it all together: the endpoints define which steps must complete in order to form a response to a URL call, middleware is responsible for taking the request and response, and forming the arguments that it will need in order to run the "real code" (or not call the real code if the call preconditions can't be met). The real code, finally, is "just code". It's not specific to web servers or route handling, it's just normal code that does a thing.
 
-This also means there are three stages of testing: endpoint testing, to see if URL calls lead to expected responses, middleware tests, to see if providing specific req/res combinations lead to the expected behaviour, and functional tests, which simply check that "norma" code functions do what they're supposed to.
+This also means there are three stages of testing: endpoint testing, to see if URL requests lead to expected responses; middleware tests, to see if providing specific req/res combinations lead to the expected behaviour; and functional tests, which simply check that plain code functions do what they're supposed to.
 
 ## Testing
 
-Testing uses the built in Node test framework. Just run `node test` and it'll will run through every test in the `src/tests` folder. Note that every file in the `src` dir has a corresponding `test.js` file in the `src/tests` folder: if you're making new files, remember to also write new tests =D
+Testing uses the built in Node test framework. Just run `npm test` and it'll will run through bothc code auto-formatting, a client build, and then the full battery of tests found in the `src/tests` folder. Note that every file in the `src` dir has a corresponding `test.js` file in the `src/tests` folder: if you're making new files, remember to also write new tests =D
 
-Note that tests will throw a lot of errors about not being able to `cd` or write files: that's expected, the test suite simply doesn't suppress any stdout/stderr while running, so errors that are _supposed_ to happen in the code, but aren't a test failure, will still end up writing error text to the console.
+Note that tests will throw a lot of unstyled errors about not being able to `cd` or write files: that's expected, the test suite simply doesn't suppress any stdout/stderr while running, so errors that are _supposed_ to happen in the code in order for a test to pass will still end up writing error text to the console. Just wait for it to finish, and then _then_ see if there are any real errors: they'll be mentioned after the coverage table.
 
-Just wait for it to finish, and then _then_ see if there are any real errors: they'll be mentioned after the coverage table.
-
-The one issue, thanks to Docker being Docker, is that it's possible for certain fetch operations to Docker containers to error out. Typically rerunning the test suite makes those disappear.
+The one issue that you are likely to (frequently) run into, thanks to Docker being Docker, is that it's possible for certain fetch operations to Docker containers to error out. For now, rerunning the test suite generally makes those disappear, but if we can find every test for which that happens, we can wrap each failing `fetch` in a `tryFor(...)` call, which will retry the fetch for a few seconds before it gives up, and a few seconds is more than enough for it to succeed.

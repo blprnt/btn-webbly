@@ -155,13 +155,10 @@ describe(`project testing`, async () => {
     const slug = `run-static-test-project`;
     const project = Project.createProjectForUser(user, slug);
     project.updated_at = scrubDateTime(new Date(0).toISOString());
-
     await Project.runProject(project);
-
     const found = await tryFor(async () => {
       const { port } = portBindings[project.slug];
       const website = `http://localhost:${port}`;
-      console.log(`fetching ${website}...`);
       try {
         await fetch(website).then((r) => r.text());
       } catch (e) {
@@ -169,24 +166,23 @@ describe(`project testing`, async () => {
       }
       return true;
     });
-
     Project.stopProject(project);
-
     assert.equal(found, true);
   });
 
   test(`runProject (docker)`, async () => {
     const { res, cleanup } = await createDockerProject();
     const { project } = res.locals.lookups;
-    let found = false;
-    try {
+    const found = await tryFor(async () => {
       const { port } = portBindings[project.slug];
-      await fetch(`http://localhost:${port}`).then((r) => r.text());
-      found = true;
-    } catch (e) {
-      // I have no idea how to force this to fail =)
-      found = e;
-    }
+      const website = `http://localhost:${port}`;
+      try {
+        await fetch(website).then((r) => r.text());
+      } catch (e) {
+        throw e;
+      }
+      return true;
+    });
     await cleanup();
     assert.equal(found, true);
   });
@@ -197,19 +193,17 @@ describe(`project testing`, async () => {
     const project = Project.createProjectForUser(user, slug);
     project.updated_at = scrubDateTime(new Date(0).toISOString());
     await Project.touch(project);
-
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    let found = false;
-    try {
+    const found = await tryFor(async () => {
       const { port } = portBindings[project.slug];
-      await fetch(`http://localhost:${port}`).then((r) => r.text());
-      found = true;
-    } catch (e) {
-      // I have no idea how to force this to fail =)
-      found = e;
-    }
+      const website = `http://localhost:${port}`;
+      try {
+        await fetch(website).then((r) => r.text());
+      } catch (e) {
+        throw e;
+      }
+      return true;
+    });
     Project.stopProject(project);
-
     assert.equal(found, true);
   });
 });

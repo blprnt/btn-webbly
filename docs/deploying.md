@@ -1,4 +1,4 @@
-# Deploying this platform
+# Deploying this platform on the internet
 
 I'll be using an exotic mix of services for maximum "this'll probably fit your bill", but if not, you can probably figure out how to deploy on your less complicated setup from reading these instructions. 
 
