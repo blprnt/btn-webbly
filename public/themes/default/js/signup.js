@@ -9,18 +9,18 @@ const signup = document.getElementById(`signup`);
   name.addEventListener(`input`, async () => {
     signup.setAttribute(`action`, ``);
 
-    const username = name.value;
-    const error = username.trim()
+    const username = name.value.trim();
+    const error = username
       ? `That username is already taken.`
       : `Invalid username`;
     const url = `/v1/users/signup/${username}`;
-    const flag = await fetch(url).then((r) => r.text());
+    const flag = (await fetch(url).then((r) => r.text())) === `true`;
 
-    const available = flag === `true`;
+    const available = flag || !username;
     signup.dataset.action = available ? url : ``;
     notice.textContent = available ? `` : error;
     name.classList.toggle(`taken`, !available);
-    providers.forEach((submit) => (submit.disabled = !available));
+    providers.forEach((submit) => (submit.disabled = !flag));
   });
 
   const providers = [...document.querySelectorAll(`button.provider`)].map(
