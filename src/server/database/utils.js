@@ -34,7 +34,8 @@ export async function applyMigrations(dbPath) {
 
   // Do we need to run any migrations?
   const migrationDir = join(dbDir, `migrations`);
-  const migrations = (await readContentDir(migrationDir))
+  const { files } = readContentDir(migrationDir);
+  const migrations = files
     .map((v) => parseFloat(v.match(/\d+/)[0]))
     .sort((a, b) => a - b);
 

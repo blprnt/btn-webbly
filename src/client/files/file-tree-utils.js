@@ -6,7 +6,8 @@ import { DEFAULT_FILES } from "./default-files.js";
 
 import { unzip } from "/vendor/unzipit.module.js";
 
-const { projectSlug, defaultFile, defaultCollapse } = document.body.dataset;
+const { defaultCollapse, defaultFile, projectMember, projectSlug } =
+  document.body.dataset;
 
 const fileTree = document.getElementById(`filetree`);
 
@@ -53,7 +54,12 @@ fileTree.addEventListener(`tree:ready`, async () => {
 export async function setupFileTree() {
   const dirData = await API.files.dir(projectSlug);
   if (dirData instanceof Error) return;
-  fileTree.setContent(dirData);
+  // Only folks with edit rights get a websocket connection:
+  if (!projectMember) {
+    fileTree.setContent(dirData);
+  } else {
+    fileTree.connectViaWebSocket(`wss://${location.host}`, projectSlug);
+  }
   addFileTreeHandling();
 }
 
@@ -61,28 +67,23 @@ export async function setupFileTree() {
  * Deal with all the events that might be coming from the file tree
  */
 function addFileTreeHandling() {
-  function updateEditorBindings(fileTreeEntry, entry, key, oldKey) {
-    if (oldKey) {
-      fileTreeEntry.state = {};
-    }
+  addFileClick(fileTree, projectSlug);
+  addFileCreate(fileTree, projectSlug);
+  addFileMove(fileTree, projectSlug);
+  addFileDelete(fileTree, projectSlug);
 
-    const { tab, panel } = entry;
-    entry.filename = key;
-    if (tab) {
-      tab.title = key;
-      tab.childNodes.forEach((n) => {
-        if (n.nodeName === `#text`) {
-          n.textContent = key;
-        }
-      });
-    }
-    if (panel) {
-      panel.title = panel.id = key;
-    }
+  addDirClick(fileTree, projectSlug);
+  addDirToggle(fileTree, projectSlug);
+  addDirCreate(fileTree, projectSlug);
+  addDirMove(fileTree, projectSlug);
+  addDirDelete(fileTree, projectSlug);
+}
 
-    fileTreeEntry.setState(entry);
-  }
+// ==================
+//   file click
+// ==================
 
+async function addFileClick(fileTree, projectSlug) {
   fileTree.addEventListener(`file:click`, async (evt) => {
     const fileEntry = evt.detail.grant();
     getOrCreateFileEditTab(
@@ -93,146 +94,225 @@ function addFileTreeHandling() {
     // note: we handle "selection" in the file tree as part of editor
     // reveals, so we do not call the event's own grant() function.
   });
+}
 
-  fileTree.addEventListener(`dir:click`, async (evt) => {
-    evt.detail.grant();
-  });
+// ==================
+//   file create
+// ==================
 
-  fileTree.addEventListener(`dir:toggle`, async (evt) => {
-    evt.detail.grant();
-  });
+async function uploadFile(fileTree, fileName, content, grant) {
+  const fileSize = content.byteLength;
+
+  if (fileSize > 10_000_000) {
+    return alert(`File uploads are limited to 10 MB`);
+  }
+
+  if (fileTree.OT) {
+    if (content instanceof ArrayBuffer) {
+      content = Array.from(new Uint8Array(content));
+    }
+    return grant(content);
+  }
+
+  const form = new FormData();
+  form.append(`filename`, fileName);
+  form.append(
+    `content`,
+    typeof content === "string"
+      ? content
+      : new Blob([content], { type: getMimeType(fileName) }),
+  );
+  const response = await API.files.upload(projectSlug, fileName, form);
+  if (response instanceof Error) return;
+  if (response.status === 200) {
+    grant?.();
+  } else {
+    console.error(`Could not upload ${fileName} (status:${response.status})`);
+  }
+}
+
+async function uploadArchive(path, content, bulkUploadPaths) {
+  const basePath = path.substring(0, path.lastIndexOf(`/`) + 1);
+  let { entries } = await unzip(new Uint8Array(content).buffer);
+
+  entries = Object.entries(entries).map(([path, entry]) => ({
+    path,
+    entry,
+  }));
+
+  // Is this a "single dir that houses the actual content" zip?
+  const prefix = (function findPrefix() {
+    let a = entries[0].path;
+    if (!a.includes(`/`)) return;
+    a = a.substring(0, a.indexOf(`/`) + 1);
+    if (entries.every((e) => e.path.startsWith(a))) return a;
+  })();
+
+  if (prefix) {
+    const singletonDir = prefix.substring(0, prefix.length - 1);
+    if (confirm(`Unpack into the root, rather than "${singletonDir}"?`)) {
+      entries.forEach((e) => (e.path = e.path.replace(prefix, ``)));
+    }
+  }
+
+  // Record which file's we're uploading, so that we can
+  // make sure NOT to open each of them and end up with
+  // a thousand open tabs that we can't hope to all close.
+  bulkUploadPaths.push(...entries.map((e) => e.path));
+
+  // Time to upload each file.
+  for await (let { path, entry } of entries) {
+    path = basePath + path;
+    const arrayBuffer = await entry.arrayBuffer();
+    const isFile = !entry.isDirectory;
+    let content = undefined;
+    if (isFile && arrayBuffer.byteLength > 0) {
+      content = new TextDecoder().decode(arrayBuffer);
+    }
+    fileTree.createEntry(path, isFile, content);
+  }
+}
+
+async function addFileCreate(fileTree, projectSlug) {
+  const bulkUploadPaths = [];
 
   fileTree.addEventListener(`file:create`, async (evt) => {
-    const { path, grant, content } = evt.detail;
+    const { path, content, bulk, grant } = evt.detail;
 
     // file upload/drop
     if (content) {
+      // Bulk upload
       if (path.endsWith(`.zip`) && confirm(`Unpack zip file?`)) {
-        const basePath = path.substring(0, path.lastIndexOf(`/`) + 1);
-        let { entries } = await unzip(new Uint8Array(content).buffer);
-
-        entries = Object.entries(entries).map(([path, entry]) => ({
-          path,
-          entry,
-        }));
-
-        // Is this a "single dir that houses the actual content" zip?
-        const prefix = (function findPrefix() {
-          let a = entries[0].path;
-          if (!a.includes(`/`)) return;
-          a = a.substring(0, a.indexOf(`/`) + 1);
-          if (entries.every((e) => e.path.startsWith(a))) return a;
-        })();
-
-        if (
-          prefix &&
-          confirm(
-            `Unpack into the root, rather than "${prefix.substring(0, prefix.length - 1)}"?`,
-          )
-        ) {
-          entries.forEach((e) => (e.path = e.path.replace(prefix, ``)));
-        }
-
-        for await (let { path, entry } of entries) {
-          const arrayBuffer = await entry.arrayBuffer();
-          const content = new TextDecoder().decode(arrayBuffer);
-          if (content.trim()) {
-            path = basePath + path;
-            uploadFile(path, content, () => fileTree.createEntry(path));
-          }
-        }
-      } else {
-        uploadFile(path, content, grant);
+        bulkUploadPaths.splice(0, bulkUploadPaths.length);
+        uploadArchive(path, content, bulkUploadPaths);
       }
+
+      // Single file upload
+      else {
+        const entry = await uploadFile(fileTree, path, content, grant);
+        if (!bulk && !bulkUploadPaths.includes(path)) {
+          getOrCreateFileEditTab(entry, projectSlug, path);
+        }
+      }
+
       updatePreview();
     }
 
     // regular file creation
     else {
+      const runCreate = () => {
+        const fileEntry = grant();
+        getOrCreateFileEditTab(fileEntry, projectSlug, path);
+      };
+
+      if (fileTree.OT) return runCreate();
+
       const response = await API.files.create(projectSlug, path);
       if (response instanceof Error) return;
       if (response.status === 200) {
-        const fileEntry = grant();
-        getOrCreateFileEditTab(fileEntry, projectSlug, path);
+        runCreate();
       } else {
         console.error(`Could not create ${path} (status:${response.status})`);
       }
     }
   });
 
-  fileTree.addEventListener(`file:rename`, async (evt) => {
-    const { oldPath, newPath, grant } = evt.detail;
-    const response = await API.files.rename(projectSlug, oldPath, newPath);
-    if (response instanceof Error) return;
-    if (response.status === 200) {
-      const fileEntry = grant();
-      let key = oldPath.replace(projectSlug, ``);
-      const entry = fileEntry.state;
-      if (entry) {
-        const newKey = newPath.replace(projectSlug, ``);
-        updateEditorBindings(fileEntry, entry, newKey, key);
-      }
-    } else {
-      console.error(
-        `Could not rename ${oldPath} to ${newPath} (status:${response.status})`,
-      );
-    }
-    updatePreview();
+  fileTree.addEventListener(`ot:created`, (evt) => {
+    // We don't actually want to do anything
+    // beyond "add the file tree entry"
   });
+}
 
-  async function uploadFile(fileName, content, grant) {
-    const fileSize = content.byteLength;
-    if (fileSize > 10_000_000) {
-      return alert(`File uploads are limited to 1MB`);
-    }
-    const form = new FormData();
-    form.append(`filename`, fileName);
-    form.append(
-      `content`,
-      typeof content === "string"
-        ? content
-        : new Blob([content], { type: getMimeType(fileName) }),
-    );
-    const response = await API.files.upload(projectSlug, fileName, form);
-    if (response instanceof Error) return;
-    if (response.status === 200) {
-      grant?.();
-    } else {
-      console.error(`Could not upload ${fileName} (status:${response.status})`);
-    }
+// ==================
+//  file rename/move
+// ==================
+
+function updateEditorBindings(fileTreeEntry) {
+  const { path, state: entry } = fileTreeEntry;
+  if (!entry) return;
+
+  let key = path;
+  if (key.includes(`/`)) {
+    key = key.substring(key.lastIndexOf(`/`) + 1);
   }
 
-  fileTree.addEventListener(`file:move`, async (evt) => {
+  const { tab, panel } = entry;
+  if (tab) {
+    tab.title = path;
+    tab.childNodes.forEach((n) => {
+      if (n.nodeName === `#text`) {
+        n.textContent = key;
+      }
+    });
+  }
+  if (panel) {
+    panel.title = panel.id = path;
+  }
+
+  fileTreeEntry.setState(entry);
+}
+
+async function addFileMove(fileTree, projectSlug) {
+  const renameHandler = async (evt) => {
     const { oldPath, newPath, grant } = evt.detail;
+
+    const runMove = () => {
+      const fileEntry = grant();
+      updateEditorBindings(fileEntry);
+    };
+
+    if (fileTree.OT) {
+      return runMove();
+    }
+
     const response = await API.files.rename(projectSlug, oldPath, newPath);
     if (response instanceof Error) return;
     if (response.status === 200) {
-      const fileEntry = grant();
-      let key = oldPath.replace(projectSlug, ``);
-      const entry = fileEntry.state;
-      if (entry) {
-        const newKey = newPath.replace(projectSlug, ``);
-        updateEditorBindings(fileEntry, entry, newKey, key);
-      }
+      runMove();
     } else {
       console.error(
         `Could not move ${oldPath} to ${newPath} (status:${response.status})`,
       );
     }
     updatePreview();
-  });
+  };
 
+  // rename is really just a move, but in terms of user experience
+  // it's a different action, so there are two events for it.
+  fileTree.addEventListener(`file:rename`, renameHandler);
+  fileTree.addEventListener(`file:move`, renameHandler);
+
+  // When OT applies it, though, there is no user interaction:
+  // both rename and move operations are just "ot:moved".
+  fileTree.addEventListener(`ot:moved`, async (evt) => {
+    updateEditorBindings(evt.detail.entry);
+  });
+}
+
+// ==================
+//    file delete
+// ==================
+
+async function addFileDelete(fileTree, projectSlug) {
   fileTree.addEventListener(`file:delete`, async (evt) => {
     const { path, grant } = evt.detail;
+
+    const runDelete = () => {
+      const [entry] = grant();
+      const { close } = entry.state ?? {};
+      close?.click();
+    };
+
+    if (fileTree.OT) {
+      return runDelete();
+    }
+
     if (path) {
       try {
         const response = await API.files.delete(projectSlug, path);
         if (response instanceof Error) return;
         if (response.status === 200) {
-          const [fileEntry] = grant();
-          const { tab, panel } = fileEntry.state ?? {};
-          tab?.remove();
-          panel?.remove();
+          runDelete();
         } else {
           console.error(`Could not delete ${path} (status:${response.status})`);
         }
@@ -243,8 +323,42 @@ function addFileTreeHandling() {
     updatePreview();
   });
 
+  fileTree.addEventListener(`ot:deleted`, async (evt) => {
+    const { entries } = evt.detail;
+    const [fileEntry] = entries;
+    const { close } = fileEntry.state ?? {};
+    close?.click();
+  });
+}
+
+// ==================
+//   dir click
+// ==================
+
+async function addDirClick(fileTree, projectSlug) {
+  fileTree.addEventListener(`dir:click`, async (evt) => {
+    evt.detail.grant();
+  });
+}
+
+// ==================
+//   dir toggle
+// ==================
+
+async function addDirToggle(fileTree, projectSlug) {
+  fileTree.addEventListener(`dir:toggle`, async (evt) => {
+    evt.detail.grant();
+  });
+}
+// ==================
+//    dir create
+// ==================
+
+async function addDirCreate(fileTree, projectSlug) {
   fileTree.addEventListener(`dir:create`, async (evt) => {
     const { path, grant } = evt.detail;
+    if (fileTree.OT) return grant();
+
     const response = await API.files.create(projectSlug, path);
     if (response instanceof Error) return;
     if (response.status === 200) {
@@ -253,9 +367,17 @@ function addFileTreeHandling() {
       console.error(`Could not create ${path} (status:${response.status})`);
     }
   });
+}
 
-  fileTree.addEventListener(`dir:rename`, async (evt) => {
+// ==================
+//   dir rename/move
+// ==================
+
+async function addDirMove(fileTree, projectSlug) {
+  const dirRenameHandler = async (evt) => {
     const { oldPath, newPath, grant } = evt.detail;
+    if (fileTree.OT) return grant();
+
     const response = await API.files.rename(projectSlug, oldPath, newPath);
     if (response instanceof Error) return;
     if (response.status === 200) {
@@ -266,24 +388,21 @@ function addFileTreeHandling() {
       );
     }
     updatePreview();
-  });
+  };
 
-  fileTree.addEventListener(`dir:move`, async (evt) => {
-    const { oldPath, newPath, grant } = evt.detail;
-    const response = await API.files.rename(projectSlug, oldPath, newPath);
-    if (response instanceof Error) return;
-    if (response.status === 200) {
-      grant();
-    } else {
-      console.error(
-        `Could not move ${oldPath} to ${newPath} (status:${response.status})`,
-      );
-    }
-    updatePreview();
-  });
+  fileTree.addEventListener(`dir:rename`, dirRenameHandler);
+  fileTree.addEventListener(`dir:move`, dirRenameHandler);
+}
 
+// ==================
+//     dir delete
+// ==================
+
+async function addDirDelete(fileTree, projectSlug) {
   fileTree.addEventListener(`dir:delete`, async (evt) => {
     const { path, grant } = evt.detail;
+    if (fileTree.OT) return grant();
+
     const response = await API.files.delete(projectSlug, path);
     if (response instanceof Error) return;
     if (response.status === 200) {

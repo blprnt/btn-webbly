@@ -151,7 +151,7 @@ export function deleteProjectForUser(user, project, adminCall) {
 export function getAccessFor(user, project) {
   if (!user) return UNKNOWN_USER;
   if (!user.enabled_at) return NOT_ACTIVATED;
-  const admin = userIsAdmin(user);
+  const admin = user.admin || userIsAdmin(user);
   if (admin) return ADMIN;
   const a = Access.find({ project_id: project.id, user_id: user.id });
   return a ? a.access_level : UNKNOWN_USER;

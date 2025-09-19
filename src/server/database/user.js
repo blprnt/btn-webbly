@@ -2,8 +2,12 @@ import { unlinkSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { stopContainer, stopStaticServer } from "../docker/docker-helpers.js";
 import { CONTENT_DIR, pathExists, slugify } from "../../helpers.js";
-import { Models } from "./models.js";
-import { getOwnedProjectsForUser } from "./project.js";
+import { MEMBER, Models } from "./models.js";
+import {
+  getProject,
+  getOwnedProjectsForUser,
+  getAccessFor,
+} from "./project.js";
 import { getServiceDomain, validProviders } from "../routing/auth/settings.js";
 
 const {
@@ -45,7 +49,7 @@ const {
 export function processUserSignup(username, userObject) {
   // Make extra sure we can safely register this user:
   const slug = slugify(username);
-  console.log(`processing signup for ${username}/${slug}`);
+  // console.log(`processing signup for ${username}/${slug}`);
   try {
     getUser(slug);
     throw new Error(`Username already taken.`);
@@ -285,6 +289,15 @@ export function hasAccessToUserRecords(user, targetUser) {
   const a = Admin.find({ user_id: user.id });
   if (!a) return false;
   return true;
+}
+
+/**
+ * ...docs go here...
+ */
+export function hasAccessToProject(user, projectSlugOrId) {
+  const project = getProject(projectSlugOrId);
+  const access = getAccessFor(user, project);
+  return access >= MEMBER;
 }
 
 /**

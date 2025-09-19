@@ -1,3 +1,13 @@
+import { join } from "node:path";
+import { applyMigrations } from "./utils.js";
+
+import {
+  readContentDir,
+  scrubDateTime,
+  TESTING,
+  ROOT_DIR,
+} from "../../helpers.js";
+
 import {
   UNKNOWN_USER,
   NOT_ACTIVATED,
@@ -22,6 +32,7 @@ import {
   getUserSettings,
   getUserSuspensions,
   hasAccessToUserRecords,
+  hasAccessToProject,
   processUserLogin,
   processUserSignup,
   removeAuthProvider,
@@ -41,6 +52,7 @@ export {
   getUserSettings,
   getUserSuspensions,
   hasAccessToUserRecords,
+  hasAccessToProject,
   processUserLogin,
   processUserSignup,
   removeAuthProvider,
@@ -96,15 +108,6 @@ export {
   updateSettingsForProject,
 };
 
-import {
-  readContentDir,
-  scrubDateTime,
-  TESTING,
-  ROOT_DIR,
-} from "../../helpers.js";
-import { applyMigrations } from "./utils.js";
-import { join } from "node:path";
-
 const dataPath = join(ROOT_DIR, `data`);
 
 /**
@@ -112,7 +115,8 @@ const dataPath = join(ROOT_DIR, `data`);
  */
 export async function getMigrationStatus() {
   let version = db.prepare(`PRAGMA user_version`).get().user_version;
-  const migrations = (await readContentDir(join(dataPath, `migrations`)))
+  const { files } = readContentDir(join(dataPath, `migrations`));
+  const migrations = files
     .map((v) => parseFloat(v.match(/\d+/)?.[0]))
     .filter(Boolean)
     .sort((a, b) => a - b);
@@ -181,4 +185,5 @@ export function concludeTesting() {
   db.exec(`DELETE FROM users`);
   db.exec(`DELETE FROM projects`);
   db.exec(`DELETE FROM remix`);
+  db.close();
 }

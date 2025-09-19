@@ -125,9 +125,7 @@ export async function restartContainer(project, rebuild = false) {
 /**
  * ...docs go here...
  */
-export async function runContainer(project) {
-  const { slug } = project;
-
+export async function runContainer(project, slug = project.slug) {
   // note: we assume the caller already checked for project
   // suspension, so we don't try to use the database here.
 

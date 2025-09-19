@@ -13,6 +13,7 @@ import {
 import { addPassportAuth } from "./auth/index.js";
 import { setupRoutesV1 } from "./v1/setup-routes.js";
 import { scrubDateTime } from "../../helpers.js";
+import { setupFileTreeWebSocket } from "./v1/websocket/filetree.js";
 
 const FIFTEEN_MINUTES_IN_MS = 15 * 60 * 1000;
 
@@ -40,23 +41,24 @@ function internalErrorHandler(err, req, res, next) {
 function addSessionManagement(app) {
   const SQLite3Store = betterSQLite3Store(session);
   const sessionsDB = new sqlite3("./data/sessions.sqlite3");
-  app.use(
-    session({
-      cookie: {
-        httpOnly: true,
+  const sessionParser = session({
+    cookie: {
+      httpOnly: true,
+    },
+    resave: false,
+    saveUninitialized: false,
+    secret: process.env.SESSION_SECRET,
+    store: new SQLite3Store({
+      client: sessionsDB,
+      expired: {
+        clear: true,
+        intervalMs: FIFTEEN_MINUTES_IN_MS,
       },
-      resave: false,
-      saveUninitialized: false,
-      secret: process.env.SESSION_SECRET,
-      store: new SQLite3Store({
-        client: sessionsDB,
-        expired: {
-          clear: true,
-          intervalMs: FIFTEEN_MINUTES_IN_MS,
-        },
-      }),
     }),
-  );
+  });
+
+  app.use(sessionParser);
+  return sessionParser;
 }
 
 /**
@@ -67,7 +69,7 @@ export function setupRoutes(app) {
   app.use(log);
 
   // We're going to need sessions
-  addSessionManagement(app);
+  const sessionParser = addSessionManagement(app);
 
   // passport-mediated login routes
   addPassportAuth(app);
@@ -100,4 +102,7 @@ export function setupRoutes(app) {
 
   // And terminal error handling.
   app.use(internalErrorHandler);
+
+  // Lastly, websocket routing:
+  return setupFileTreeWebSocket(app, sessionParser);
 }

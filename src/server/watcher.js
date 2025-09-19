@@ -27,8 +27,8 @@ function rebuild() {
  */
 export async function watchForRebuild() {
   const dir = `./src/client`;
-  (await readContentDir(dir))
-    .filter((f) => f.endsWith(`.js`))
+  const { files } = readContentDir(dir, `*.js`);
+  files
     .map((filepath) => {
       const fullPath = join(dir, filepath);
       fileHashes[fullPath] = getFileSum(null, fullPath, true);
