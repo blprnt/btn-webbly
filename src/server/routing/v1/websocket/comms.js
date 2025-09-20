@@ -31,9 +31,7 @@ class Comms {
     this.#seqnums[basePath] = 1;
     this.#changelog[basePath] = [];
     this.#handlers[basePath] ??= new Set();
-    const project = getProject(basePath, false);
-    console.log(`storing project for [${basePath}]:`, project);
-    this.#projects[basePath] = project;
+    this.#projects[basePath] = getProject(basePath, false);
   }
 
   /**
