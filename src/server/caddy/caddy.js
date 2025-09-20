@@ -30,10 +30,7 @@ export function setupCaddy(env = process.env) {
   const config = readFileSync(defaultCaddyFile)
     .toString()
     .replaceAll(`$WEB_EDITOR_HOSTNAME`, env.WEB_EDITOR_HOSTNAME)
-    .replaceAll(
-      `$WEB_EDITOR_APPS_HOSTNAME`,
-      `*.${env.WEB_EDITOR_APPS_HOSTNAME}`,
-    )
+    .replaceAll(`$WEB_EDITOR_APPS_HOSTNAME`, env.WEB_EDITOR_APPS_HOSTNAME)
     .replaceAll(`$WEB_EDITOR_APP_SECRET`, env.WEB_EDITOR_APP_SECRET)
     .replaceAll(`$TLS_DNS_PROVIDER`, env.TLS_DNS_PROVIDER)
     .replaceAll(`$TLS_DNS_API_KEY`, env.TLS_DNS_API_KEY)

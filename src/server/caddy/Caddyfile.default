@@ -6,7 +6,11 @@ $WEB_EDITOR_HOSTNAME {
 	reverse_proxy localhost:8000
 }
 
-$WEB_EDITOR_APPS_HOSTNAME {
+www.$WEB_EDITOR_APPS_HOSTNAME {
+	redir https://$WEB_EDITOR_HOSTNAME permanent
+}
+
+*.$WEB_EDITOR_APPS_HOSTNAME {
 	rewrite /v1/projects/start/{labels.2}/$WEB_EDITOR_APP_SECRET
 	reverse_proxy localhost:8000
 	tls {
