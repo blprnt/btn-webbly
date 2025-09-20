@@ -55,6 +55,7 @@ export async function setupFileTree() {
   const dirData = await API.files.dir(projectSlug);
   if (dirData instanceof Error) return;
   // Only folks with edit rights get a websocket connection:
+  /*
   if (!projectMember) {
     fileTree.setContent(dirData);
   } else {
@@ -62,6 +63,8 @@ export async function setupFileTree() {
     console.log(`connecting wss:`, url, projectSlug);
     fileTree.connectViaWebSocket(url, projectSlug);
   }
+  */
+  fileTree.setContent(dirData);
   addFileTreeHandling();
 }
 
