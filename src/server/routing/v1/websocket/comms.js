@@ -31,7 +31,9 @@ class Comms {
     this.#seqnums[basePath] = 1;
     this.#changelog[basePath] = [];
     this.#handlers[basePath] ??= new Set();
-    this.#projects[basePath] = getProject(basePath);
+    const project = getProject(basePath, false);
+    console.log(`storing project for [${basePath}]:`, project);
+    this.#projects[basePath] = project;
   }
 
   /**
@@ -102,7 +104,8 @@ class Comms {
   touch(basePath) {
     const time = scrubDateTime(new Date().toISOString());
     console.log(`TOUCH [${time}] ${basePath}`);
-    touch(this.#projects[basePath]);
+    const project = this.#projects[basePath];
+    touch(project);
   }
 }
 
