@@ -29723,7 +29723,6 @@ function createUpdateListener(entry) {
         const oldContent = entry.content;
         const newContent = applyPatch(oldContent, update);
         entry.scrollPosition = view.dom.querySelector(`.cm-scroller`).scrollTop;
-        console.log(entry.scrollPosition);
         entry.content = newContent;
         entry.contentReset = true;
         view.dispatch({
@@ -29918,6 +29917,7 @@ var DEFAULT_FILES = [
 
 // src/client/files/file-tree-utils.js
 import { unzip } from "/vendor/unzipit.module.js";
+var USE_WEBSOCKETS = !!document.body.dataset.useWebsockets;
 var { defaultCollapse, defaultFile, projectMember, projectSlug: projectSlug2 } = document.body.dataset;
 var fileTree2 = document.getElementById(`filetree`);
 fileTree2.addEventListener(`tree:ready`, async () => {
@@ -29949,10 +29949,12 @@ fileTree2.addEventListener(`tree:ready`, async () => {
 async function setupFileTree() {
   const dirData = await API.files.dir(projectSlug2);
   if (dirData instanceof Error) return;
-  if (!projectMember) {
-    fileTree2.setContent(dirData);
+  if (USE_WEBSOCKETS && projectMember) {
+    const url = `wss://${location.host}`;
+    console.log(`connecting wss:`, url, projectSlug2);
+    fileTree2.connectViaWebSocket(url, projectSlug2);
   } else {
-    fileTree2.connectViaWebSocket(`wss://${location.host}`, projectSlug2);
+    fileTree2.setContent(dirData);
   }
   addFileTreeHandling();
 }

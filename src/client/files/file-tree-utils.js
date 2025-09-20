@@ -6,6 +6,8 @@ import { DEFAULT_FILES } from "./default-files.js";
 
 import { unzip } from "/vendor/unzipit.module.js";
 
+const USE_WEBSOCKETS = !!document.body.dataset.useWebsockets;
+
 const { defaultCollapse, defaultFile, projectMember, projectSlug } =
   document.body.dataset;
 
@@ -55,16 +57,14 @@ export async function setupFileTree() {
   const dirData = await API.files.dir(projectSlug);
   if (dirData instanceof Error) return;
   // Only folks with edit rights get a websocket connection:
-  /*
-  if (!projectMember) {
-    fileTree.setContent(dirData);
-  } else {
-    const url = `https://${location.host}`;
+
+  if (USE_WEBSOCKETS && projectMember) {
+    const url = `wss://${location.host}`;
     console.log(`connecting wss:`, url, projectSlug);
     fileTree.connectViaWebSocket(url, projectSlug);
+  } else {
+    fileTree.setContent(dirData);
   }
-  */
-  fileTree.setContent(dirData);
   addFileTreeHandling();
 }
 

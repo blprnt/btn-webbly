@@ -14,7 +14,6 @@ export function createUpdateListener(entry) {
         const newContent = applyPatch(oldContent, update);
 
         entry.scrollPosition = view.dom.querySelector(`.cm-scroller`).scrollTop;
-        console.log(entry.scrollPosition);
 
         entry.content = newContent;
         entry.contentReset = true;
