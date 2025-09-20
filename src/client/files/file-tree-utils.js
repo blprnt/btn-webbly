@@ -7,6 +7,7 @@ import { DEFAULT_FILES } from "./default-files.js";
 import { unzip } from "/vendor/unzipit.module.js";
 
 const USE_WEBSOCKETS = !!document.body.dataset.useWebsockets;
+let setupAlready = false;
 
 const { defaultCollapse, defaultFile, projectMember, projectSlug } =
   document.body.dataset;
@@ -54,6 +55,13 @@ fileTree.addEventListener(`tree:ready`, async () => {
  * Make sure we're in sync with the server...
  */
 export async function setupFileTree() {
+  if (setupAlready) {
+    console.log(`wtf?`);
+    console.trace();
+    return;
+  }
+  setupAlready = true;
+  
   const dirData = await API.files.dir(projectSlug);
   if (dirData instanceof Error) return;
   // Only folks with edit rights get a websocket connection:

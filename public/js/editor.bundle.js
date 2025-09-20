@@ -29918,6 +29918,7 @@ var DEFAULT_FILES = [
 // src/client/files/file-tree-utils.js
 import { unzip } from "/vendor/unzipit.module.js";
 var USE_WEBSOCKETS = !!document.body.dataset.useWebsockets;
+var setupAlready = false;
 var { defaultCollapse, defaultFile, projectMember, projectSlug: projectSlug2 } = document.body.dataset;
 var fileTree2 = document.getElementById(`filetree`);
 fileTree2.addEventListener(`tree:ready`, async () => {
@@ -29947,6 +29948,12 @@ fileTree2.addEventListener(`tree:ready`, async () => {
   }
 });
 async function setupFileTree() {
+  if (setupAlready) {
+    console.log(`wtf?`);
+    console.trace();
+    return;
+  }
+  setupAlready = true;
   const dirData = await API.files.dir(projectSlug2);
   if (dirData instanceof Error) return;
   if (USE_WEBSOCKETS && projectMember) {
