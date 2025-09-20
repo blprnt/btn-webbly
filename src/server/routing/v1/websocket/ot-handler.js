@@ -58,6 +58,14 @@ export class OTHandler {
   // ==========================================================================
 
   async onkeepalive({ basePath }) {
+    if (!basePath) {
+      return console.error(`received touch call without a project slug`);
+    }
+    if (basePath !== this.basePath) {
+      return console.error(
+        `received touch call for wrong project (received ${basePath} instead of ${this.basePath})`,
+      );
+    }
     comms.touch(basePath);
   }
 
