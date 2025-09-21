@@ -1,42 +1,11 @@
 <p>
-  Welcome to this browser based "web editor for web content" instance (we need
-  to workshop that name)!
+  This is the code platform for Binoculars to Binomials. It's a place where you can make and share fun web projects that are about birds and data.
 </p>
 
 <img style="max-width: 90%; border: 1px solid black" src="screenshot.png" />
 
 <p>
-  If you know the owner of this instance, you can sign up for an account and
-  have them enable you as active user, after which you can start using this
-  platform to make cool shit on the web (we probably need to workshop that
-  slogan, too =)
-</p>
-
-<h2>How this works</h2>
-
-<p>
-  The idea is that this is a platform similar to (the unfortunately now
-  shuttered) Glitch, giving you an editor that lets you work on and with full
-  stack web stuff, directly in the browser, with an immediately hosted version
-  of that available to the public.
-</p>
-
-<p>
-  The idea is also that there's trust: no drive-by sign ups for putting shit on
-  the web that no one wants. You agree to play by the rules, and in return the
-  instance owner (and anyone they deem trustworthy enough to give admin rights
-  to) will let you do your thing. Break that trust, and the admins may suspend
-  or delete your project(s), or may even suspend or delete your user account.
-</p>
-
-<p>
-  In return, the admins are on the hook for moderating the instance: different
-  folks will have different standards when it comes to what kind of web content
-  is acceptable, and by signing up at an instance whose policies and code of
-  conduct resonate with you, you are trusting the admins to do a good job making
-  sure violations will be appropriately dealt with. No hiding behind the US
-  communications act section 230: you are on the hook for playing by the rules,
-  and the admins are on the hook for stepping in when you don't.
+  If you're part of the <a href="https://jerthorp.me/learning" target="_blank">Binoculars to Binomials</a> community, you can sign up for an account. If you're not part of the BtB community you can request an account, too. If I know you or if you reach out I will approve it.
 </p>
 
 <h2>Log in</h2>
@@ -52,19 +21,6 @@
       >
     </li>
   {% endfor %}
-  {% if LOCAL_DEV_TESTING === "true" %}
-    <li>
-      <form action="/auth/email" method="post">
-        Or, <button>fake</button> an
-        <input type="email" name="email" placeholder="email" /> signin.
-      </form>
-      <p>
-        Note that this second option only exists to do user testing<br />
-        with fake users, and doesn't actually send out any emails.<br />
-        The activation link gets logged to the console.
-      </p>
-    </li>
-  {% endif %}
 </ul>
 
 <p>
@@ -112,38 +68,6 @@
   </li>
 </ul>
 
-<p>
-  Also, following the same philosophy of trust: instead of a cookie banner, you
-  get an opt-in agreement here. Obviously, logins require storing enough
-  information about you in a database to constitute "personally identifiable
-  information", even if it's indirect information (i.e. auth token data that can
-  be traced back to your account on the auth broker's website, which in turn
-  will have more information about you than is stored here), and persistent
-  logins work because your browser stores an identifier that gets sent to server
-  in order for it to perform session management. So:
-</p>
-
-<p>
-  <strong>
-    <em
-      >By signing up/logging in you are obviously okay with all of the
-      above.</em
-    >
-  </strong>
-</p>
-
-<p>
-  Also also, while this platform offers private files and a way to specify
-  secret environment variables, that privacy is only for the general public. If
-  an admin decides to be a bad actor and looks at your private files or combs
-  through the database looking for API keys, there is nothing you can do to stop
-  that. So: exercise the same caution as you do everywhere else. Don't put
-  information on the internet that you can't afford to have become public,
-  either because you can immediately invalidate things (like keys and
-  certificates) or because the data is useless without some additional off-site
-  information. And of course, sites get hacked. This is simply a fact of life:
-  write your project code accordingly.
-</p>
 
 <h2>I signed up but I can't do anything?</h2>
 
@@ -153,13 +77,6 @@
   do). If we know each other, shoot me a message saying you signed up and I'll
   immediately enable your account, but if I have no idea who you are, it's quite
   likely that I'll just delete your account...
-</p>
-
-<p>
-  In fact, that's the main selling point of this platform:
-  <em>you don't need my approval</em> to use it, just go run your own instance
-  and have fun with it. Let your friends join that one, and have a good time on
-  the interwebs.
 </p>
 
 <h2>Starter projects</h2>
@@ -232,13 +149,6 @@
 
 <h2>Who runs this instance?</h2>
 
-<p>It's me, <a href="https://mastodon.social/@TheRealPomax">Pomax</a>!</p>
-
-<h2>What's with these colours???</h2>
-
-<p>
-  Run your own instance and you can customize the look and feel to your heart's
-  content. After all, <a href="https://csszengarden.com">it's just CSS</a>!
-</p>
+<p>It's me, <a href="https://bsky.app/profile/jerthorp.bsky.social">Jer Thorp</a>!</p>
 
 <script src="/themes/default/js/signup.js" async defer></script>
