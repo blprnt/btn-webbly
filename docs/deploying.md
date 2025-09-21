@@ -1,6 +1,6 @@
 # Deploying this platform on the internet
 
-I'll be using an exotic mix of services for maximum "this'll probably fit your bill", but if not, you can probably figure out how to deploy on your less complicated setup from reading these instructions. 
+I'll be using an exotic mix of services for maximum "this'll probably fit your bill", but if not, you can probably figure out how to deploy on your less complicated setup from reading these instructions.
 
 - I'm using domains registered at NameCheap
 - I'm using DNS handling through Digital Ocean
@@ -30,9 +30,9 @@ The platform needs a bunch of software to be installed before it'll work, so... 
 
 ### Set up SSH-key based SSH login
 
-Just in case you were tempted to keep using a root:password combination to SSH into your host. 
+Just in case you were tempted to keep using a root:password combination to SSH into your host.
 
-Set up proper login using SSH keys. 
+Set up proper login using SSH keys.
 
 There are lots of guides for this on the internet, pick your favourite one and follow the instructions.
 
@@ -71,7 +71,7 @@ See https://www.digitalocean.com/community/tutorials/how-to-install-and-use-dock
 
 ### Set up Caddy
 
-Oh boy... 
+Oh boy...
 
 (1) We'll need to install `go`, because we're going to need to custom-build `caddy` with DO's DNS module, using `xcaddy`.
 
@@ -171,6 +171,18 @@ When asked for your domains, fill in the domains you have lined up, making sure 
 When asked for your github id and secret, fill those in.
 
 When asked whether you want to set up TLS, the answer is yes. This will ask you to inpute the TLS provider, which is `digitalocean`, and your API key, which is the DigitalOcean API key you made.
+
+## Mark the deployment as production deployment
+
+By default the setup process will write an `.env` file that marks the platform as running in local dev mode. That's useful for the initial setup process if you want to just test that your deployment works, but once you're ready to just "have it live online" you probably want to mark it as a production environment.
+
+To do so, open the `.env` file in any text editor, and change the `LOCAL_DEV_TESTING` variable from `"true"` to an empty variable:
+
+```
+LOCAL_DEV_TESTING=
+```
+
+This value doesn't change anything about how the platform itself works, but it _does_ turn off some dev-only information that gets rendered into pages, most notably the "fake a user account with an email link" signin option.
 
 ## Running the platform forever
 

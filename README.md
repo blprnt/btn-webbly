@@ -50,11 +50,12 @@ No of course not: it's just web pages, so you can change the templates and CSS t
 
 ## Alright, I'm sold, how do I install this on my own computer?
 
-1. It's a node project, so you'll need that installed (I recommend `nvm` or its windows equivalent). Specifically, you will need Node version 24 or newer.
-1. You'll also need `git` installed. Normally that goes without saying, but in this case we're also using it as an under-the-hood tool for performing version control for project content so you can't just copy this repo's source code, you _need_ `git` installed properly.
-1. You'll also need docker installed, which has different instructions depending on the OS you're using.
-1. And you'll want `caddy` installed, for reverse-proxying container ports so you can just load https://projectname.localhost
-1. Finally, you need `sqlite3` installed. Rinse and repeat for linux or MacOs, on Windows you'll want to download the `sqlite-tools-win-x64-somenumbershere.zip` from https://www.sqlite.org/download.html, create a `C:\Program Files\Sqlite3`, and unpack the zip file into that, then add that folder to your PATH (The "Docker" section below goes over how you do that for docker, just do the same for sqlite3).
+1. It's a **Node** project, so you'll need that installed (I recommend `nvm` or its windows equivalent). Specifically, you will need Node version 24 or newer.
+1. You'll also need **Git** installed. Normally that goes without saying, but in this case we're also using it as an under-the-hood tool for performing version control for project content so you can't just copy this repo's source code, you _need_ `git` installed properly. **If you're on Windows** make sure to not just install `git` but to pick the **Use Git and optional Unix tools from the Windows Command Prompt** option. If you already have `git` installed but you never installed the Unix tools, just (re)run the latest git-scm Windows installer and pick that option.
+1. You'll also need **Docker** installed, which has different instructions depending on the OS you're using.
+1. And you'll want **Caddy** installed, for reverse-proxying container ports so you can just load https://projectname.localhost
+1. Finally, you need **SQLite3** installed. Rinse and repeat for linux or MacOs, on Windows you'll want to download the `sqlite-tools-win-x64-somenumbershere.zip` from https://www.sqlite.org/download.html, create a `C:\Program Files\Sqlite3`, and unpack the zip file into that, then add that folder to your PATH (The "Docker" section below goes over how you do that for docker, just do the same for sqlite3).
+
 
 With those prerequisites met:
 
