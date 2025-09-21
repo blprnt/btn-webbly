@@ -1,5 +1,6 @@
 import test, { after, before, describe } from "node:test";
 import assert from "node:assert/strict";
+import { join } from "node:path";
 import { OTHandler } from "../../../../../server/routing/v1/websocket/ot-handler.js";
 import {
   initTestDatabase,
@@ -28,7 +29,7 @@ describe(`comm tests`, async () => {
     await handler.onload({ basePath: `test-project` });
     assert.equal(handler.basePath, `test-project`);
     const path = handler.getFullPath(`cake`);
-    assert.equal(path, `content/test-project/cake`);
+    assert.equal(path, join(`content`, `test-project`, `cake`));
     // We can probably do some OT here, but
     // that'll be for another day.
     handler.send(`doesn't`, `matter`);
