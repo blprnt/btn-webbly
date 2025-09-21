@@ -1,6 +1,6 @@
-FROM alpine:latest
+FROM node:24-alpine
 
-# this should speak for itself
+# Install additional packages we need
 RUN apk add --update --no-cache \
     alpine-sdk \
     curl \
@@ -9,10 +9,7 @@ RUN apk add --update --no-cache \
     musl-dev \
     python3 \
     python3-dev \
-    py3-pip \
-    nodejs-lts \
-    npm
-
+    py3-pip
 
 # just in case
 RUN rm -rf /var/cache/apk/*
@@ -22,9 +19,6 @@ RUN ln -sf python3 /usr/bin/python
 
 # Python auto-formatting
 RUN pip install black --break-system-packages
-
-# link up Node
-RUN ln -sf node /usr/bin/nodejs
 
 # web content auto-formatting
 RUN npm install -g prettier

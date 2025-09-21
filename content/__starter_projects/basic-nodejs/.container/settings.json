@@ -1,6 +1,6 @@
 {
   "description": "A basic Node.js Express server with templating",
-  "run_script": "# In order for our node project to run, we need\n# to make sure to install its dependencies:\nnpm install\n\n# And then we can run the \"start\" command:\nnpm start\n",
+  "run_script": "#!/bin/sh\ncd /app || exit 1\necho \"Working directory: $(pwd)\"\necho \"Files present: $(ls -la)\"\nnpm install || exit 1\nnpm start",
   "default_collapse": "node_modules",
   "app_type": "docker"
 }

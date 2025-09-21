@@ -1,6 +1,5 @@
 import { execSync } from "node:child_process";
 import { join, resolve } from "node:path";
-
 import {
   cpSync,
   createReadStream,
@@ -335,12 +334,22 @@ export async function remixProject(req, res, next) {
     cloneProject(project, newProjectSlug, isStarter);
     recordProjectRemix(project, newProject);
 
+// Fix ownership for Docker container compatibility
+try {
+  const projectPath = join(CONTENT_DIR, newProjectSlug);
+  execSync(`chown -R 1001:1001 "${projectPath}"`, { stdio: 'ignore' });
+  console.log(`Fixed ownership for ${newProjectSlug}`);
+} catch (error) {
+  console.warn(`Warning: Failed to fix ownership for ${newProjectSlug}:`, error.message);
+}
+
     const s = copyProjectSettings(project, newProject);
     const containerDir = join(CONTENT_DIR, newProjectSlug, `.container`);
     const runScript = join(containerDir, `run.sh`);
 
     // shell scripts *must* use unix line endings.
     writeFileSync(runScript, s.run_script.replace(/\r\n/g, `\n`));
+    //writeFileSync(runScript, s.run_script.replace(/\\n/g, '\n').replace(/\r\n/g, `\n`));
     next();
   } catch (e) {
     console.error(e);

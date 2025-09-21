@@ -157,7 +157,8 @@ export async function runContainer(project, slug = project.slug) {
   if (!result.match(new RegExp(`\\b${slug}\\b`, `gm`))) {
     console.log(`- Starting container on port ${port}`);
     const runFlags = `--rm --stop-timeout 0 --name ${slug}`;
-    const bindMount = `--mount type=bind,src=.${sep}content${sep}${slug},dst=/app`;
+    //const bindMount = `--mount type=bind,src=.${sep}content${sep}${slug},dst=/app`;
+    const bindMount = `--mount type=bind,src=${process.cwd()}${sep}content${sep}${slug},dst=/app`;
     const envVars = Object.entries(getProjectEnvironmentVariables(project))
       .map(([k, v]) => `-e ${k}="${v}"`)
       .join(` `);
