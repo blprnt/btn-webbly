@@ -110,6 +110,8 @@
     const form = d.querySelector(`form`);
     form.addEventListener(`submit`, async (evt) => {
       evt.preventDefault();
+      d.querySelector(`h1`).outerHTML = `<p>Saving...</p>`;
+      form.style.display = `none`;
       location = await fetch(url, {
         method: `POST`,
         body: new FormData(form),
