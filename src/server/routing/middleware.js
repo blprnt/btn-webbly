@@ -278,6 +278,7 @@ export function loadProviders(req, res, next) {
  */
 export function loadStarters(req, res, next) {
   res.locals.starters = getStarterProjects();
+  console.log('DEBUG starters:', JSON.stringify(res.locals.starters, null, 2));
   next();
 }
 
