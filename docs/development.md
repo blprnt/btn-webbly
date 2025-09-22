@@ -50,3 +50,14 @@ Testing uses the built in Node test framework. Just run `npm test` and it'll wil
 Note that tests will throw a lot of unstyled errors about not being able to `cd` or write files: that's expected, the test suite simply doesn't suppress any stdout/stderr while running, so errors that are _supposed_ to happen in the code in order for a test to pass will still end up writing error text to the console. Just wait for it to finish, and then _then_ see if there are any real errors: they'll be mentioned after the coverage table.
 
 The one issue that you are likely to (frequently) run into, thanks to Docker being Docker, is that it's possible for certain fetch operations to Docker containers to error out. For now, rerunning the test suite generally makes those disappear, but if we can find every test for which that happens, we can wrap each failing `fetch` in a `tryFor(...)` call, which will retry the fetch for a few seconds before it gives up, and a few seconds is more than enough for it to succeed.
+
+
+## How do I update docker containers if I update the codebase?
+
+To generate a new docker base image after updating the codebase, you can run:
+
+```
+node setup --clean
+```
+
+This will leave any running containers alone, but clean up any "dead" containers based on the old image, then generates a new local base image, after which any project container that gets built will use the new image instead. So if you need to "force people to update" you can run the `--clean` pass, then go into the admin page, stop all containers, and then whenever people try to load their site, that'll trigger an updated container build. Handy!
