@@ -4,6 +4,10 @@
 
 $WEB_EDITOR_HOSTNAME {
 	reverse_proxy localhost:8000
+	header {
+    	# It's a good practice to use the full domains when possible
+    	Content-Security-Policy "form-action 'self' https://github.com https://accounts.google.com"
+	}
 }
 
 www.$WEB_EDITOR_APPS_HOSTNAME {
