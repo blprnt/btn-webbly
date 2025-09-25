@@ -175,6 +175,8 @@ export function setDefaultAspects(app) {
         scriptSrc: `* data: blob: 'unsafe-inline' 'unsafe-eval'`,
         scriptSrcElem: `* data: blob: 'unsafe-inline'`,
         styleSrc: `* data: blob: 'unsafe-inline'`,
+        formAction: ["'self'", "https://github.com", "https://accounts.google.com"],
+
       },
     }),
   );
