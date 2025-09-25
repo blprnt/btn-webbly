@@ -3,21 +3,13 @@
 }
 
 $WEB_EDITOR_HOSTNAME {
-	header /auth/* {
-        Content-Security-Policy `
-            default-src 'self';
-            script-src 'self' 'nonce-{uuid}' https://accounts.google.com/gsi/client;
-            style-src 'self' 'nonce-{uuid}' https://accounts.google.com/gsi/style;
-            connect-src 'self' https://accounts.google.com/gsi/ https://api.github.com;
-            form-action 'self' github.com gist.github.com https://accounts.google.com;
-            frame-src https://accounts.google.com/gsi/;
-            img-src 'self' data: https://avatars.githubusercontent.com;
-            base-uri 'self';
-            frame-ancestors 'none';
-            object-src 'none';
-            report-uri /csp-violations;
-        `
-    }
+	header {
+    Content-Security-Policy `
+        default-src 'self';
+        connect-src 'self' https://accounts.google.com/gsi/ https://api.github.com;
+        form-action 'self' github.com https://accounts.google.com;
+    `
+	}
 	reverse_proxy localhost:8000
 }
 
