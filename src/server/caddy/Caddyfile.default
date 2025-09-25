@@ -3,9 +3,6 @@
 }
 
 $WEB_EDITOR_HOSTNAME {
-	header {
-    Content-Security-Policy "default-src 'self'; connect-src 'self' https://accounts.google.com/gsi/ https://api.github.com; form-action 'self' github.com https://accounts.google.com;"
-	}
 	reverse_proxy localhost:8000
 }
 
