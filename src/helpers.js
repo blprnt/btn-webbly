@@ -29,7 +29,7 @@ process.env.CONTENT_DIR = CONTENT_DIR;
 
 // Set up the things we need for scheduling git commits when
 // content changes, or the user requests an explicit rewind point:
-export const COMMIT_TIMEOUT_MS = 5_000;
+export const COMMIT_TIMEOUT_MS = 15_000;
 
 // We can't save timeouts to req.session so we need a separate tracker
 const COMMIT_TIMEOUTS = {};
@@ -48,7 +48,6 @@ export function createRewindPoint(
   const { slug } = project;
   const dir = join(ROOT_DIR, CONTENT_DIR, slug);
   const debounce = COMMIT_TIMEOUTS[slug];
-
   if (debounce) clearTimeout(debounce);
 
   COMMIT_TIMEOUTS[slug] = setTimeout(async () => {
@@ -187,7 +186,7 @@ export async function setupGit(dir, projectSlug) {
   for (let cfg of [
     `init.defaultBranch main`,
     `user.name "${projectSlug}"`,
-    `user.email "actions@browsertests.local"`,
+    `user.email "actions@makewebblythings.local"`,
   ]) {
     await execPromise(`git config --local ${cfg}`, { cwd: dir });
   }

@@ -1,31 +1,22 @@
 import { createPatch, applyPatch } from "/vendor/diff.js";
-import { fetchFileContents, getFileSum } from "../utils/utils.js";
+import {
+  fetchFileContents,
+  getFileSum,
+  updateViewMaintainScroll,
+} from "../utils/utils.js";
 import { updatePreview } from "../preview/preview.js";
 import { API } from "../utils/api.js";
+import { Rewinder } from "./rewind.js";
 
 export function createUpdateListener(entry) {
-  const { view } = entry;
-
   return async (evt) => {
     const { type, update, ours } = evt.detail;
     if (type === `diff`) {
       if (!ours) {
         const oldContent = entry.content;
         const newContent = applyPatch(oldContent, update);
-
-        entry.scrollPosition = view.dom.querySelector(`.cm-scroller`).scrollTop;
-
         entry.content = newContent;
-        entry.contentReset = true;
-        view.dispatch({
-          changes: {
-            from: 0,
-            to: oldContent.length,
-            insert: entry.content,
-          },
-        });
-
-        // TODO: ideally we can preserve scroll position cleanly? https://github.com/Pomax/make-webbly-things/issues/105
+        updateViewMaintainScroll(entry);
       }
       updatePreview();
     }
@@ -39,13 +30,19 @@ export function createUpdateListener(entry) {
  * made was correct by comparing the on-disk "hash" value with
  * the same value based on the current editor content.
  */
-export async function syncContent(projectSlug, fileEntry) {
+export async function syncContent(projectSlug, fileEntry, forced = false) {
+  if (Rewinder.active && !forced) return;
+
   const { path } = fileEntry;
   const entry = fileEntry.state;
   if (entry.noSync) return;
 
+  // Do we even have something to sync, here?
   const currentContent = entry.content;
   const newContent = entry.view.state.doc.toString();
+  if (newContent === currentContent) return;
+
+  // We do!
   const patch = createPatch(path, currentContent, newContent);
 
   // sync via websocket or REST?
@@ -73,15 +70,8 @@ export async function syncContent(projectSlug, fileEntry) {
       if (document.body.dataset.projectMember) {
         entry.content = await fetchFileContents(projectSlug, path);
       }
-
       entry.contentReset = true;
-      entry.view.dispatch({
-        changes: {
-          from: 0,
-          to: entry.view.state.doc.length,
-          insert: entry.content,
-        },
-      });
+      updateViewMaintainScroll(entry);
     }
   }
 

@@ -1,6 +1,7 @@
 import { fetchFileContents } from "../utils/utils.js";
 import { API } from "../utils/api.js";
 import { Notice } from "../utils/notifications.js";
+import { Rewinder } from "../files/rewind.js";
 
 const mac = navigator.userAgent.includes(`Mac OS`);
 
@@ -8,14 +9,27 @@ const mac = navigator.userAgent.includes(`Mac OS`);
 const left = document.getElementById(`left`);
 const right = document.getElementById(`right`);
 
-// These may not always exist:
-const download = document.getElementById(`download`);
-const format = document.getElementById(`format`);
-
 /**
  * Hook up the "Add new file" and "Format this file" buttons
  */
 export function addEventHandling(projectSlug) {
+  disableSaveHotkey();
+  enableDownloadButton(projectSlug);
+  connectPrettierButton(projectSlug);
+  enableRewindFunctions();
+  addTabScrollHandling();
+
+  // Lastly: make sure we can tell whether or not this
+  // document is "dead" and about to get cleaned up.
+  globalThis.addEventListener("beforeunload", () => {
+    globalThis.__shutdown = true;
+  });
+}
+
+/**
+ * ...docs go here...
+ */
+function disableSaveHotkey() {
   // disable the "Save page" shortcut because it's meaningless in this context.
   document.addEventListener(`keydown`, (evt) => {
     const { key, ctrlKey, metaKey } = evt;
@@ -26,12 +40,28 @@ export function addEventHandling(projectSlug) {
       }
     }
   });
+}
 
-  download?.addEventListener(`click`, async () => {
+/**
+ * ...docs go here...
+ */
+function enableDownloadButton(projectSlug) {
+  const download = document.getElementById(`download`);
+  if (!download) return;
+
+  download.addEventListener(`click`, async () => {
     API.projects.download(projectSlug);
   });
+}
 
-  format?.addEventListener(`click`, async () => {
+/**
+ * ...docs go here...
+ */
+function connectPrettierButton(projectSlug) {
+  const format = document.getElementById(`format`);
+  if (!format) return;
+
+  format.addEventListener(`click`, async () => {
     const tab = document.querySelector(`.active`);
     const fileEntry = document.querySelector(`file-entry.selected`);
     if (fileEntry.state?.tab !== tab) {
@@ -53,8 +83,34 @@ export function addEventHandling(projectSlug) {
       },
     });
   });
+}
 
-  addTabScrollHandling();
+/**
+ * ...docs go here...
+ */
+function enableRewindFunctions() {
+  const rewindBtn = document.getElementById(`rewind`);
+  if (!rewindBtn) return;
+
+  rewindBtn.addEventListener(`click`, async () => {
+    rewindBtn.blur();
+    const path = document.querySelector(`.active.tab`).title;
+    const fileTree = document.querySelector(`file-tree`);
+    if (path) {
+      const fileEntry = document.querySelector(`file-entry[path="${path}"]`);
+      if (fileEntry) {
+        const { rewind } = fileEntry.state ?? {};
+        if (rewind && rewind.open) {
+          fileTree.classList.remove(`rewinding`);
+          Rewinder.close();
+        } else {
+          Rewinder.enable();
+          fileTree.classList.add(`rewinding`);
+          fileTree.OT?.getFileHistory(path);
+        }
+      }
+    }
+  });
 }
 
 /**

@@ -3,6 +3,7 @@ import { fetchFileContents, create } from "../utils/utils.js";
 import { getViewType, verifyViewType } from "../files/content-types.js";
 import { syncContent, createUpdateListener } from "../files/sync.js";
 import { ErrorNotice } from "../utils/notifications.js";
+import { Rewinder } from "../files/rewind.js";
 
 const { projectId } = document.body.dataset;
 
@@ -65,6 +66,7 @@ export function addEditorEventHandling(fileEntry, panel, tab, close, view) {
     if (!fileEntry.state) return;
     if (!fileEntry.state.tab) return;
     if (!fileEntry.parentNode) return;
+    if (!fileEntry.select) return;
     fileEntry.select();
     document
       .querySelectorAll(`.editor`)
@@ -76,10 +78,17 @@ export function addEditorEventHandling(fileEntry, panel, tab, close, view) {
     tab.classList.add(`active`);
     tab.scrollIntoView();
     view.focus();
+
     // update our visible URL too, so folks can link to files.
     const currentURL = location.toString().replace(location.search, ``);
     const viewURL = `${currentURL}?view=${fileEntry.path}`;
     history.replaceState(null, null, viewURL);
+
+    // Finally: are we rewinding?
+    if (Rewinder.active) {
+      // TODO: DRY: can we unify this with file-tree-utils
+      fileTree.OT?.getFileHistory(fileEntry.path);
+    }
   });
 
   const closeTab = () => {
@@ -109,7 +118,7 @@ export function addEditorEventHandling(fileEntry, panel, tab, close, view) {
 export async function getOrCreateFileEditTab(fileEntry, projectSlug, filename) {
   let entry = fileEntry.state;
 
-  if (entry?.view) {
+  if (entry?.tab) {
     const { closed, tab, panel } = entry;
     if (closed) {
       entry.closed = false;
@@ -117,6 +126,13 @@ export async function getOrCreateFileEditTab(fileEntry, projectSlug, filename) {
       editors.appendChild(panel);
     }
     return tab.click();
+  } else {
+    // edge case: reconnecting the websocket when the server
+    // has a blip may try to load a tab that already exists.
+    const { path } = fileEntry;
+    if (document.querySelector(`[title="${path}"]`)) {
+      return;
+    }
   }
 
   // Is this text or viewable media?
@@ -154,7 +170,7 @@ export async function getOrCreateFileEditTab(fileEntry, projectSlug, filename) {
   // Plain text?
   if (viewType.text || viewType.unknown) {
     if (data.map) {
-      data = data.map((v) => String.fromCharCode(v)).join(``);
+      data = new TextDecoder().decode(Uint8Array.from(data));
     }
     const initialState = getInitialState(fileEntry, filename, data);
     view = setupView(panel, initialState);
