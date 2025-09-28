@@ -9,6 +9,7 @@
     "node": ">=24"
   },
   "scripts": {
+    "admin": "npm start -- --admin-mode",
     "build": "npm run lint && npm run build:es",
     "build:es": "esbuild --log-level=info --bundle --external:/vendor/* --format=esm --target=esnext src/client/entry-point.js > public/js/editor.bundle.js",
     "prettier": "prettier --write \"./src/**/*.js\"",

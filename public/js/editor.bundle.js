@@ -32091,13 +32091,6 @@ fileTree2.addEventListener(`tree:ready`, async () => {
       if (fileEntry) break;
     }
   }
-  if (fileEntry) {
-    getOrCreateFileEditTab(
-      fileEntry,
-      projectSlug3,
-      fileEntry.getAttribute(`path`)
-    );
-  }
   if (defaultCollapse.trim()) {
     const entries = defaultCollapse.split(`
 `).map((v) => v.trim()).filter(Boolean);
@@ -32105,6 +32098,13 @@ fileTree2.addEventListener(`tree:ready`, async () => {
       let entry = fileTree2.querySelector(`dir-entry[path="${path2}/"]`);
       entry?.toggle(true);
     });
+  }
+  if (fileEntry) {
+    getOrCreateFileEditTab(
+      fileEntry,
+      projectSlug3,
+      fileEntry.getAttribute(`path`)
+    );
   }
 });
 async function setupFileTree() {
