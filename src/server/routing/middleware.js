@@ -155,11 +155,11 @@ export function verifyOwner(req, res, next) {
  * ...docs go here...
  * @returns
  */
-export function bindCommonValues(req, res, next) {
+export async function bindCommonValues(req, res, next) {
   const { uid, user, pid, project, filename, starter } = req.params;
 
   // Bind the session user as res.locals.user
-  bindUser(req, res);
+  await bindUser(req, res);
 
   // Build route lookup locals
   res.locals.lookups ??= {};

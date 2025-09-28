@@ -17,8 +17,8 @@ export function setupFileTreeWebSocket(app, sessionParser) {
     console.log(new Date().toISOString(), ` - upgrade`);
 
     // make sure this user is authenticated before we allow a connection:
-    sessionParser(request, {}, () => {
-      const user = bindUser(request);
+    sessionParser(request, {}, async () => {
+      const user = await bindUser(request);
 
       if (!user) {
         socket.write(`HTTP/1.1 401 Unauthorized\r\n\r\n`);
@@ -49,7 +49,7 @@ export function setupFileTreeWebSocket(app, sessionParser) {
  * message handling to a websocket.
  */
 export async function addFileTreeCommunication(socket, request) {
-  const user = bindUser(request);
+  const user = await bindUser(request);
   if (!user) return;
 
   // Our websocket based request handler.
@@ -60,7 +60,7 @@ export async function addFileTreeCommunication(socket, request) {
     const { type, detail, handlerName } = unpackMessage(message);
     if (!type) return;
     try {
-      console.log(new Date().toISOString(), ` - handler call`);
+      // console.log(new Date().toISOString(), ` - ${handlerName} call`);
       otHandler[handlerName](detail, request);
     } catch (e) {
       return console.warn(`Missing implementation for ${handlerName}.`);

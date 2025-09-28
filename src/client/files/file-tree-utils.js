@@ -50,7 +50,7 @@ fileTree.addEventListener(`tree:ready`, async () => {
     getOrCreateFileEditTab(
       fileEntry,
       projectSlug,
-      fileEntry.getAttribute(`path`)
+      fileEntry.getAttribute(`path`),
     );
   }
 });
@@ -73,9 +73,9 @@ export async function setupFileTree() {
         return setTimeout(
           () =>
             new ErrorNotice(
-              `Cannot connect to the server, it might be dead T_T`
+              `Cannot connect to the server, it might be dead T_T`,
             ),
-          RETRY_INTERVAL
+          RETRY_INTERVAL,
         );
       }
 
@@ -85,7 +85,7 @@ export async function setupFileTree() {
         url,
         projectSlug,
         60_000,
-        CustomWebsocketInterface
+        CustomWebsocketInterface,
       );
 
       // Is there a failed initial attemp that needs to
@@ -100,7 +100,7 @@ export async function setupFileTree() {
           if (globalThis.__shutdown) return;
           new Warning(
             `No connection to server, trying to connect...`,
-            RETRY_INTERVAL
+            RETRY_INTERVAL,
           );
           connect(retry + 1);
         }, RETRY_INTERVAL);
@@ -119,7 +119,7 @@ export async function setupFileTree() {
     if (success !== true) {
       new ErrorNotice(
         `initial connection took longer than a second`,
-        RETRY_INTERVAL
+        RETRY_INTERVAL,
       );
       retried = true;
       connect();
@@ -156,7 +156,7 @@ async function addFileClick(fileTree, projectSlug) {
     getOrCreateFileEditTab(
       fileEntry,
       projectSlug,
-      fileEntry.getAttribute(`path`)
+      fileEntry.getAttribute(`path`),
     );
 
     // note: we handle "selection" in the file tree as part of editor
@@ -198,7 +198,7 @@ async function uploadFile(fileTree, fileName, content, grant) {
     `content`,
     typeof content === "string"
       ? content
-      : new Blob([content], { type: getMimeType(fileName) })
+      : new Blob([content], { type: getMimeType(fileName) }),
   );
   const response = await API.files.upload(projectSlug, fileName, form);
   if (response instanceof Error) return;
