@@ -73,7 +73,7 @@ export async function setupFileTree() {
         return setTimeout(
           () =>
             new ErrorNotice(
-              `Cannot connect to the server, it might be dead T_T`,
+              `Cannot connect to the server... it might be offline?`,
             ),
           RETRY_INTERVAL,
         );
