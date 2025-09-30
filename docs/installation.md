@@ -74,4 +74,3 @@ When you run the system, Caddy will set up a name binding when you switch projec
 - Windows users will need to head over to https://www.sqlite.org/download.html and download the precompiled "tools" .zip file for your Windows architecture. I'd recommend creating a `sqlite3` folder in your `C:\Program Files\` folder (which hopefully requires UAC, because I very much hope you're not using an admin account as your normal account), and then unpack the .zip file into that folder. Then run `SystemPropertiesAdvanced`, which will open what that name suggests. Click "environment variables", in the bottom panel, scroll down and double click `Path`, and then add the sqlite3 folder as a new entry.
 - MacOS users can install `sqlite3` using whatever their favourite package manager is.
 - Linux users can install `sqlite3` using their built in package manager.
-

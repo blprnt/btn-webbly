@@ -54,13 +54,16 @@ No of course not: it's just web pages, so you can change the templates and CSS t
 1. You'll also need **Git** installed. Normally that goes without saying, but in this case we're also using it as an under-the-hood tool for performing version control for project content so you can't just copy this repo's source code, you _need_ `git` installed properly.
 1. You'll also need **Docker** installed, for running projects in an isolated context.
 1. And you'll want **Caddy** installed, for reverse-proxying localhost ports to normal host names.
-1. Finally, you need **SQLite3** installed because that's what we're using for our databases.
+1. For the database, you need **SQLite3** installed because that's what we're using for our databases.
+1. And finally, you may need to run a special `playwright` command as part of first-time installtion.
 
 ### See the [how to install everything](./docs/installation.md) doc if you need help with installing any (or all) of these prerequisites.
 
 With those prerequisites met:
 
-- clone this repo (or fork it and then clone that), then
+- Clone this repo (or fork it and then clone that), then
+- run `npm install` in the repo folder.
+  - this may show a Playwright box instructing you to install some missing dependencies. If so: follow those instructions. Then,
 - run `node setup` in the repo folder.
 
 Once that finishes, things should be cross-platform enough to work on Windows, Mac, and Linux by running `npm start` and then opening the URL that tells you things are running on.
