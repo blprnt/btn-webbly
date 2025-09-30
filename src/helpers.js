@@ -205,25 +205,6 @@ export function setDefaultAspects(app) {
  * Make git not guess at the name and email for commits.
  */
 export async function setupGit(dir, projectSlug) {
-  try {
-    // Verify the directory exists and has a git repository
-    const gitDir = join(dir, '.git');
-    if (!existsSync(gitDir)) {
-      console.warn(`Warning: No .git directory found in ${dir}, skipping git config`);
-      return;
-    }
-    
-    for (let cfg of [
-      `init.defaultBranch main`,
-      `user.name "${projectSlug}"`,
-      `user.email "actions@browsertests.local"`,
-    ]) {
-      await execPromise(`git config --local ${cfg}`, { cwd: dir });
-    }
-    console.log(`Git configured for ${projectSlug}`);
-  } catch (error) {
-    console.warn(`Warning: Failed to configure git for ${projectSlug}:`, error.message);
-    // Don't throw - just log and continue
   for (let cfg of [
     `init.defaultBranch main`,
     `user.name "${projectSlug}"`,
@@ -232,6 +213,7 @@ export async function setupGit(dir, projectSlug) {
     await execPromise(`git config --local ${cfg}`, { cwd: dir });
   }
 }
+
 /**
  * ...docs go here...
  */
