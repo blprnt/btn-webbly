@@ -54,6 +54,7 @@ import {
 
 import { portBindings, removeCaddyEntry } from "../../../caddy/caddy.js";
 import { runProject } from "../../../database/project.js";
+import { addGitTracking } from "../../../git/git-utils.js";
 
 /**
  * ...docs go here...
@@ -96,6 +97,7 @@ function cloneProject(project, slug, isStarter) {
     cpSync(dir.replace(slug, source), tempDir, { recursive: true });
 
     try {
+      // remove starter project's .git traclomg
       rmdirSync(join(tempDir, `.git`), { recursive: true });
     } catch (e) {
       // this can't fail.
@@ -121,6 +123,7 @@ function cloneProject(project, slug, isStarter) {
 
     rmdirSync(dir, { recursive: true });
     renameSync(tempDir, dir);
+    addGitTracking(dir, `initial remix`);
   }
 }
 
@@ -233,12 +236,11 @@ export async function loadProject(req, res, next) {
     return next(new Error(`No such project`));
   }
 
-  // ensure there's a git dir
+  // ensure there's a git dir, just in case someone
+  // writes their own "delete the .git dir" code...
   if (!pathExists(`${dir}/.git`)) {
     console.log(`adding git tracking for ${dir}`);
-    execSync(
-      `cd ${dir} && git init && git add . && git commit -m "first push" && cd ..`,
-    );
+    addGitTracking(dir, `initial commit`);
   }
 
   let suspended = false;
