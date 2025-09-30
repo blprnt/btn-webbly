@@ -1,10 +1,13 @@
+import { API } from "../utils/api.js";
 import { getInitialState, setupView } from "./code-mirror-6.js";
 import { fetchFileContents, create } from "../utils/utils.js";
 import { getViewType, verifyViewType } from "../files/content-types.js";
 import { syncContent, createUpdateListener } from "../files/sync.js";
 import { ErrorNotice } from "../utils/notifications.js";
+import { Rewinder } from "../files/rewind.js";
+import { handleFileHistory } from "../files/websocket-interface.js";
 
-const { projectId } = document.body.dataset;
+const { projectId, projectSlug, useWebsockets } = document.body.dataset;
 
 const fileTree = document.querySelector(`file-tree`);
 const tabs = document.getElementById(`tabs`);
@@ -61,10 +64,11 @@ export function setupEditorTab(filename) {
  * @param {*} view
  */
 export function addEditorEventHandling(fileEntry, panel, tab, close, view) {
-  tab.addEventListener(`click`, () => {
+  tab.addEventListener(`click`, async () => {
     if (!fileEntry.state) return;
     if (!fileEntry.state.tab) return;
     if (!fileEntry.parentNode) return;
+    if (!fileEntry.select) return;
     fileEntry.select();
     document
       .querySelectorAll(`.editor`)
@@ -76,10 +80,22 @@ export function addEditorEventHandling(fileEntry, panel, tab, close, view) {
     tab.classList.add(`active`);
     tab.scrollIntoView();
     view.focus();
+
     // update our visible URL too, so folks can link to files.
     const currentURL = location.toString().replace(location.search, ``);
     const viewURL = `${currentURL}?view=${fileEntry.path}`;
     history.replaceState(null, null, viewURL);
+
+    // Finally: are we rewinding?
+    if (Rewinder.active) {
+      // TODO: DRY: can we unify this with file-tree-utils and event-handling
+      if (useWebsockets) {
+        fileTree.OT?.getFileHistory(fileEntry.path);
+      } else {
+        const history = await API.files.history(projectSlug, fileEntry.path);
+        handleFileHistory(fileEntry, projectSlug, history);
+      }
+    }
   });
 
   const closeTab = () => {
@@ -109,7 +125,7 @@ export function addEditorEventHandling(fileEntry, panel, tab, close, view) {
 export async function getOrCreateFileEditTab(fileEntry, projectSlug, filename) {
   let entry = fileEntry.state;
 
-  if (entry?.view) {
+  if (entry?.tab) {
     const { closed, tab, panel } = entry;
     if (closed) {
       entry.closed = false;
@@ -117,6 +133,13 @@ export async function getOrCreateFileEditTab(fileEntry, projectSlug, filename) {
       editors.appendChild(panel);
     }
     return tab.click();
+  } else {
+    // edge case: reconnecting the websocket when the server
+    // has a blip may try to load a tab that already exists.
+    const { path } = fileEntry;
+    if (document.querySelector(`[title="${path}"]`)) {
+      return;
+    }
   }
 
   // Is this text or viewable media?
@@ -154,7 +177,7 @@ export async function getOrCreateFileEditTab(fileEntry, projectSlug, filename) {
   // Plain text?
   if (viewType.text || viewType.unknown) {
     if (data.map) {
-      data = data.map((v) => String.fromCharCode(v)).join(``);
+      data = new TextDecoder().decode(Uint8Array.from(data));
     }
     const initialState = getInitialState(fileEntry, filename, data);
     view = setupView(panel, initialState);

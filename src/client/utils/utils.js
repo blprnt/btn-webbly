@@ -2,12 +2,24 @@ import { API } from "./api.js";
 
 export const noop = () => {};
 
+const { min } = Math;
+
 /**
  * nicer than always typing document.createElement
  */
-export function create(tag, attributes = {}) {
+export function create(tag, attributes = {}, evts = {}) {
   const e = document.createElement(tag);
-  Object.entries(attributes).forEach(([k, v]) => e.setAttribute(k, v));
+  Object.entries(attributes).forEach(([k, v]) => {
+    if (k === `textContent`) {
+      e.textContent = attributes.textContent;
+      return;
+    }
+    if (k.startsWith(`data`)) {
+      k = k.replace(/([A-Z])/g, (_, l) => `-${l.toLowerCase()}`);
+    }
+    e.setAttribute(k, v);
+  });
+  Object.entries(evts).forEach(([t, fn]) => e.addEventListener(t, fn));
   return e;
 }
 
@@ -43,4 +55,38 @@ export function getFileSum(data) {
 export function listEquals(a1, a2) {
   if (a1.length !== a2.length) return false;
   return a1.every((v, i) => a2[i] === v);
+}
+
+/**
+ * Update the editor text while maintaining the
+ * scroll position. In a janky fashion, but
+ * janky is better than "not at all".
+ *
+ * TODO: ideally we can preserve scroll position cleanly? https://github.com/Pomax/make-webbly-things/issues/105
+ *
+ * @param {*} entry
+ * @param {*} content
+ */
+export async function updateViewMaintainScroll(
+  entry,
+  content = entry.content,
+  editable = true,
+) {
+  const { view } = entry;
+  entry.setEditable(editable);
+  const { doc, selection } = view.state;
+  const cursor = doc.lineAt(selection.main.head);
+  const line = doc.line(cursor.number);
+  view.dispatch({
+    changes: {
+      from: 0,
+      to: doc.length ?? 0,
+      insert: content,
+    },
+    selection: {
+      anchor: min(content.length, line.from ?? 0),
+      head: min(content.length, line.from ?? 0),
+    },
+    scrollIntoView: true,
+  });
 }

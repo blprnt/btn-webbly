@@ -2,6 +2,7 @@ import net from "node:net";
 import { join, resolve, sep, posix } from "node:path";
 import { exec, execSync } from "node:child_process";
 import { existsSync, globSync, lstatSync, readFileSync } from "node:fs";
+import * as AuthSettings from "./server/routing/auth/settings.js";
 import express from "express";
 import nocache from "nocache";
 import helmet from "helmet";
@@ -29,10 +30,25 @@ process.env.CONTENT_DIR = CONTENT_DIR;
 
 // Set up the things we need for scheduling git commits when
 // content changes, or the user requests an explicit rewind point:
-export const COMMIT_TIMEOUT_MS = 5_000;
+export const COMMIT_TIMEOUT_MS = 10_000;
 
 // We can't save timeouts to req.session so we need a separate tracker
 const COMMIT_TIMEOUTS = {};
+
+// Make sure all the CSP directives that need clearing are set to cleared
+const CSP_DIRECTIVES = {
+  connectSrc: `* data: blob: 'unsafe-inline'`,
+  defaultSrc: `* data: mediastream: blob: filesystem: about: ws: wss: 'unsafe-eval' 'unsafe-inline'`,
+  fontSrc: `* data: blob: 'unsafe-inline'`,
+  formAction: `'self'`,
+  frameAncestors: `* data: blob: 'unsafe-inline'`,
+  frameSrc: `* data: blob:`,
+  imgSrc: `* data: blob: 'unsafe-inline'`,
+  mediaSrc: `* data: blob: 'unsafe-inline'`,
+  scriptSrc: `* data: blob: 'unsafe-inline' 'unsafe-eval'`,
+  scriptSrcElem: `* data: blob: 'unsafe-inline'`,
+  styleSrc: `* data: blob: 'unsafe-inline'`,
+};
 
 /**
  * Schedule a git commit to capture all changes since the last time we did that.
@@ -48,7 +64,6 @@ export function createRewindPoint(
   const { slug } = project;
   const dir = join(ROOT_DIR, CONTENT_DIR, slug);
   const debounce = COMMIT_TIMEOUTS[slug];
-
   if (debounce) clearTimeout(debounce);
 
   COMMIT_TIMEOUTS[slug] = setTimeout(async () => {
@@ -180,6 +195,10 @@ export function setDefaultAspects(app) {
       },
     }),
   );
+  const directives = structuredClone(CSP_DIRECTIVES);
+  AuthSettings.updateCSPDirectives(directives);
+  app.use(helmet.contentSecurityPolicy({ directives }));
+
 }
 
 /**
@@ -205,6 +224,12 @@ export async function setupGit(dir, projectSlug) {
   } catch (error) {
     console.warn(`Warning: Failed to configure git for ${projectSlug}:`, error.message);
     // Don't throw - just log and continue
+  for (let cfg of [
+    `init.defaultBranch main`,
+    `user.name "${projectSlug}"`,
+    `user.email "actions@makewebblythings.local"`,
+  ]) {
+    await execPromise(`git config --local ${cfg}`, { cwd: dir });
   }
 }
 /**

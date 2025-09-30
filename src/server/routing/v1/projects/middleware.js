@@ -5,6 +5,7 @@ import {
   createReadStream,
   createWriteStream,
   existsSync,
+  globSync,
   lstatSync,
   mkdirSync,
   readFileSync,
@@ -126,9 +127,10 @@ function cloneProject(project, slug, isStarter) {
  * ...docs go here...
  */
 export async function createProjectDownload(req, res, next) {
-  const { dirData, lookups } = res.locals;
+  const { dirData, lookups, user } = res.locals;
   const { files } = dirData;
-  const { slug } = lookups.project;
+  const { project } = lookups;
+  const { slug } = project;
 
   const zipDir = resolve(join(CONTENT_DIR, `__archives`));
   if (!pathExists(zipDir)) mkdirSync(zipDir);
@@ -146,13 +148,31 @@ export async function createProjectDownload(req, res, next) {
   // Additional "these should never be in a zip file"
   const prefixes = [`node_modules/`];
 
+  // And additional "these should be added back in"
+  if (getAccessFor(user, project) >= OWNER) {
+    files.push(
+      ...globSync(`.git/**/*`, {
+        cwd: join(CONTENT_DIR, slug),
+      }),
+    );
+  }
+
+  // Then we build our zip file.
   files.forEach((file) => {
     if (prefixes.some((p) => file.startsWith(p))) return;
     const path = resolve(CONTENT_DIR, slug, file);
-    if (lstatSync(path).isDirectory()) return;
-    // console.log(file);
-    const stream = createReadStream(path);
-    archive.append(stream, { name: `${slug}/${file}` });
+    try {
+      if (lstatSync(path).isDirectory()) {
+        // Don't include dir entries
+        // TODO: This means we "lose" empty dirs
+        return;
+      }
+      // console.log(file);
+      const stream = createReadStream(path);
+      archive.append(stream, { name: `${slug}/${file}` });
+    } catch (e) {
+      // This file is not getting added.
+    }
   });
 
   // console.log(`finalizing ${slug}.zip`)
@@ -215,7 +235,9 @@ export async function loadProject(req, res, next) {
   // ensure there's a git dir
   if (!pathExists(`${dir}/.git`)) {
     console.log(`adding git tracking for ${dir}`);
-    execSync(`cd ${dir} && git init && cd ..`);
+    execSync(
+      `cd ${dir} && git init && git add . && git commit -m "first push" && cd ..`,
+    );
   }
 
   let suspended = false;

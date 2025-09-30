@@ -1,6 +1,6 @@
 import sqlite3 from "better-sqlite3";
 import test, { after, describe, before } from "node:test";
-import assert from "node:assert";
+import assert from "node:assert/strict";
 import * as Utils from "../../setup/utils.js";
 import { cpSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
@@ -12,6 +12,7 @@ const { SETUP_ROOT_DIR } = Utils;
 
 const autoFill = {
   LOCAL_DEV_TESTING: `false`,
+  USE_WEBSOCKETS: `true`,
   WEB_EDITOR_HOSTNAME: `localhost`,
   WEB_EDITOR_APPS_HOSTNAME: `app.localhost`,
   WEB_EDITOR_IMAGE_NAME: `test-image-for-platform-setup`,

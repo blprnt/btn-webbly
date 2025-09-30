@@ -1,0 +1,107 @@
+@keyframes fade-in-out {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+html {
+  body {
+    file-tree.rewinding {
+      background: #00ffb71c;
+      border: 5px solid #00ffc3 !important;
+      box-sizing: border-box;
+      dir-entry[path="."] {
+        & > span.buttons {
+          &:before {
+            content: "rewinding";
+            font-weight: bold;
+            opacity: 0;
+            animation: fade-in-out 2s ease-in alternate infinite;
+          }
+        }
+      }
+    }
+
+    &:has(file-tree.rewinding) {
+      #rewind {
+        background: #00ffcf;
+      }
+      #editors {
+        .cm-editor {
+          background: #f001;
+        }
+      }
+    }
+
+    .history {
+      &.hidden {
+        display: none;
+      }
+
+      position: fixed;
+      left: 0;
+      bottom: 0;
+      width: 100%;
+      height: 1.7em;
+      background: #00abff;
+
+      display: flex;
+      align-content: center;
+      align-items: center;
+      justify-content: flex-start;
+
+      --x: 0;
+      counter-reset: station;
+
+      .point {
+        cursor: pointer;
+        padding: 0 0.5em;
+        background: white;
+        border-radius: 100%;
+        margin-right: 4em;
+        border: 1.5px solid black;
+        box-sizing: content-box;
+        display: inline-block;
+        width: 0em;
+        height: 1em;
+
+        transform: translate(var(--x), 0);
+        transition: transform 0.1s ease-in-out;
+
+        &.selected {
+          background: #ff00cb;
+          &:before {
+            background: #ff00b3;
+            color: white;
+            text-shadow: 0 0 3px black;
+          }
+        }
+
+        &:before {
+          white-space: nowrap;
+          content: attr(data-time);
+
+          position: absolute;
+          transform: rotate(-22deg) translate(0.5em, -1em);
+          transform-origin: top left;
+          background: #44ffd8;
+          padding: 0.2em 0.5em;
+          border-radius: 0.8em;
+          border: 1px solid #3b3b3c;
+          color: black;
+          text-shadow: 0 0 3px white;
+          font-family: Arial;
+          font-weight: bold;
+          box-shadow: 0px 5px 0px 0px white;
+        }
+
+        &:nth-child(n + 2):before {
+          content: "(" counter(station) ") " attr(data-time);
+          counter-increment: station;
+        }
+      }
+    }
+  }
+}

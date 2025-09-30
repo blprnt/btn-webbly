@@ -1,6 +1,6 @@
 import { watch } from "node:fs";
-import { join, dirname, basename } from "node:path";
-import { spawnSync } from "node:child_process";
+import { join } from "node:path";
+import { execSync } from "node:child_process";
 import { readContentDir, getFileSum } from "../helpers.js";
 
 const isWindows = process.platform === `win32`;
@@ -15,9 +15,7 @@ let fileHashes = {};
 function rebuild() {
   console.log(`rebuilding`);
   const start = Date.now();
-  spawnSync(npm, [`run`, `build:es`], {
-    stdio: `inherit`,
-  });
+  execSync(`${npm} run build:es`, { stdio: `inherit` });
   (console.log(`Build took ${Date.now() - start}ms`), 8);
   rebuildLock = false;
 }

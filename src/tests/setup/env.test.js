@@ -1,5 +1,5 @@
 import test, { after, describe } from "node:test";
-import assert from "node:assert";
+import assert from "node:assert/strict";
 import { setupEnv } from "../../setup/env.js";
 
 import { answer } from "../test-helpers.js";
@@ -7,6 +7,7 @@ import { closeReader } from "../../setup/utils.js";
 
 const autoFill = {
   LOCAL_DEV_TESTING: `false`,
+  USE_WEBSOCKETS: `false`,
   WEB_EDITOR_HOSTNAME: `localhost`,
   WEB_EDITOR_APPS_HOSTNAME: `app.localhost`,
   WEB_EDITOR_IMAGE_NAME: `test-image-for-platform-setup`,
