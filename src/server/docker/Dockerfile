@@ -29,6 +29,7 @@ RUN npm install -g http-server
 # set up a user so we don't run as root
 RUN adduser -D -h /home/app -s /bin/ash app
 USER app
+RUN git config --global --add safe.directory '*'
 WORKDIR app
 
 # set up our port and port-based healthcheck
