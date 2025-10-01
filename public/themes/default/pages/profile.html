@@ -64,6 +64,28 @@
             </li>
           {% endfor %}
         </ul>
+
+        <p>
+          If you need to log in on a device that does is not itself logged into
+          any of the auth providers you're using, you can generate a direct
+          login link here. These links act like a normal login, setting up a
+          persistent cookie-based session, but the links themselves are
+          one-time-use, and expire after 24 hours (as well as whenever the
+          server restarts). Also note that <em>anyone</em> can use this link, so
+          if you need one: generate it, send it to yourself, and immediately use
+          it to log in.
+        </p>
+
+        <button class="generate">generate a link</button>
+        <input type="text" class="auth-link" />
+
+        <p>
+          <em
+            >And remember not to send it to yourself using something that loads
+            URLs to see if it can get convenient embed/opengraph information
+            from it. Because that <strong>will</strong> void the link!</em
+          >
+        </p>
       </section>
     {% endif %}
 
@@ -154,7 +176,7 @@
     {% else %}
       This user does not have any projects yet.
     {% endif %}
-
+    
     {% if user %}
       {% include "fragments/file-issues.html" %}
     {% endif %}

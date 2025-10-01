@@ -31,9 +31,13 @@ import {
 // at the module's top level scope...
 import dotenv from "@dotenvx/dotenvx";
 import { addLoginProviderForUser } from "../../database/user.js";
+import { bindCommonValues, verifyLogin } from "../middleware.js";
+import { randomUUID } from "node:crypto";
 const envPath = join(import.meta.dirname, `../../../../.env`);
 dotenv.config({ path: envPath, quiet: true });
 const { WEB_EDITOR_HOSTNAME } = process.env;
+
+const PERSONAL_LINK_TTL = 24 * 3600 * 1000; // 24h in milliseconds
 
 /**
  * Is this a provider that we actually have auth for?
@@ -52,6 +56,7 @@ export function addPassportAuth(app) {
   addGithubAuth(app);
   addEmailAuth(app);
   addMastodonAuth(app);
+  addPersonalAuthLinks(app);
   app.use(`/auth/logout`, (req, res, next) =>
     req.logout((err) => {
       if (err) return next(err);
@@ -167,6 +172,54 @@ export function addMastodonAuth(app, settings = mastodonSettings) {
   mastodon.get(`/logout`, logout);
   mastodon.get(`/`, loginWithMastodon);
   app.use(`/auth/mastodon`, mastodon);
+}
+
+export function addPersonalAuthLinks(app) {
+  const personal = Router();
+  const transientCodes = {};
+
+  function generateLoginLink(req, res, next) {
+    const { user } = res.locals;
+    const loginCode = randomUUID();
+    transientCodes[loginCode] = {
+      user,
+      createdAt: Date.now(),
+      ttl: PERSONAL_LINK_TTL,
+    };
+    res.locals.authLink = `https://${WEB_EDITOR_HOSTNAME}/auth/personal/login/${loginCode}`;
+    next();
+  }
+
+  personal.get(
+    `/link`,
+    bindCommonValues,
+    verifyLogin,
+    generateLoginLink,
+    (req, res) => res.send(res.locals.authLink),
+  );
+
+  function validatePersonalLogin(req, res, next) {
+    const { uuid } = req.params;
+    if (!transientCodes[uuid]) return next(new Error(`Invalid auth code`));
+    const { user, createdAt, ttl } = transientCodes[uuid];
+    delete transientCodes[uuid];
+    if (createdAt + ttl < Date.now()) {
+      return next(new Error(`Auth code expired`));
+    }
+    req.session.user = user;
+    req.session.save();
+    next();
+  }
+
+  personal.get(
+    // TODO: this probably wants some kind of express-rate-limit
+    `/login/:uuid`,
+    bindCommonValues,
+    validatePersonalLogin,
+    (req, res) => res.redirect(`/`),
+  );
+
+  app.use(`/auth/personal`, personal);
 }
 
 /**

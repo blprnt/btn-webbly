@@ -7,6 +7,14 @@ html {
       }
     }
 
+    button.generate {
+      width: 10em;
+    }
+
+    input.auth-link {
+      width: calc(80% - 10em);
+    }
+
     form ul,
     ul.links {
       display: block;
