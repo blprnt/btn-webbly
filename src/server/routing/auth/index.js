@@ -174,6 +174,10 @@ export function addMastodonAuth(app, settings = mastodonSettings) {
   app.use(`/auth/mastodon`, mastodon);
 }
 
+/**
+ * Set up direct auth links, for when logged in users need
+ * to log in a device that has no github or google etc. login
+ */
 export function addPersonalAuthLinks(app) {
   const personal = Router();
   const transientCodes = {};
