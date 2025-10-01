@@ -12,6 +12,19 @@ function cwd(projectSlug) {
 }
 
 /**
+ * helper function to add a .git dir somewhere
+ */
+export function addGitTracking(dir, msg = `initial commit`) {
+  const cmd = [
+    `cd ${dir}`,
+    `git init`,
+    `git add .`,
+    `git commit --allow-empty -m "${msg}"`,
+  ];
+  return execSync(cmd.join(` && `));
+}
+
+/**
  * Get a file from a specific commit.
  */
 export function getFileFrom(hash, filepath) {

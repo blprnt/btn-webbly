@@ -67,7 +67,7 @@ export async function bindUser(req, res = { locals: {} }, next = () => {}) {
     fallback = { user };
   }
 
-  const { user } = req.session.passport ?? fallback;
+  const { user } = req.session.passport ?? req.session ?? fallback;
   res.locals.user = user;
   next();
   return user;

@@ -23,7 +23,7 @@ import {
 import { Router } from "express";
 export const admin = Router();
 
-const prechecks = [verifyLogin, bindCommonValues, verifyAdmin];
+const prechecks = [bindCommonValues, verifyLogin, verifyAdmin];
 
 admin.get(`/`, ...prechecks, loadAdminData, (req, res) =>
   res.render(`admin.html`, { ...res.locals, ...req.session, ...process.env }),

@@ -34,3 +34,6 @@ export class ErrorNotice extends Notice {
     super(message, ttl, `error`);
   }
 }
+
+// Expose as globals, too
+globalThis.__notices = { Notice, Warning, ErrorNotice };

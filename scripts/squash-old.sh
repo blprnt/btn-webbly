@@ -32,7 +32,7 @@ if [[ ! -z "${KEEP}" ]]; then
 echo "${BRANCH} ${FIRST} ${KEEP}"
 git checkout ${KEEP}
 git reset --soft ${FIRST}
-git commit --amend --allow-empty-commit
+git commit --amend --allow-empty
 git tag historycollapse
 git checkout ${BRANCH}
 git rebase --onto historycollapse ${KEEP}

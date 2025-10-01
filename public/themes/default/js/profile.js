@@ -1,8 +1,21 @@
 const edit = document.querySelector(`button.show-edit`);
 const presentation = document.querySelector(`section.presentation`);
 const editForm = document.querySelector(`section.edit-form`);
+const generate = document.querySelector(`.generate`);
 
 (function setup() {
+  if (generate) {
+    generate.addEventListener(`click`, async () => {
+      const link = await fetch(`/auth/personal/link`).then((t) => t.text());
+      if (link.startsWith(`https://`)) {
+        const linkField = document.querySelector(`.auth-link`);
+        linkField.value = link;
+        linkField.focus();
+        linkField.select();
+      }
+    });
+  }
+
   if (!edit || !presentation || !editForm) return;
 
   const removeLinks = [];
