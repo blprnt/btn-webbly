@@ -133,6 +133,7 @@ var ErrorNotice = class extends Notice {
     super(message, ttl, `error`);
   }
 };
+globalThis.__notices = { Notice, Warning, ErrorNotice };
 
 // src/client/files/content-types.js
 function getMimeType(fileName) {

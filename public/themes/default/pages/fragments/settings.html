@@ -112,10 +112,22 @@
       evt.preventDefault();
       d.querySelector(`h1`).outerHTML = `<p>Saving...</p>`;
       form.style.display = `none`;
-      location = await fetch(url, {
+
+      const result = await fetch(url, {
         method: `POST`,
         body: new FormData(form),
       }).then((r) => r.text());
+
+      if (result.startsWith(`/v1/projects/edit/`)) {
+        location = result;
+      } else {
+        const ErrorNotice = window.__notices?.ErrorNotice ?? false;
+        if (ErrorNotice) {
+          // TODO: improve the error so folks know why.
+          new ErrorNotice(`Could not save updated project settings`, 3000);
+        }
+        d.remove();
+      }
     });
 
     document.body.appendChild(d);
