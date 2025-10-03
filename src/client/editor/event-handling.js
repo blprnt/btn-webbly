@@ -1,4 +1,4 @@
-import { fetchFileContents } from "../utils/utils.js";
+import { fetchFileContents, updateViewMaintainScroll } from "../utils/utils.js";
 import { API } from "../utils/api.js";
 import { Notice } from "../utils/notifications.js";
 import { Rewinder } from "../files/rewind.js";
@@ -74,16 +74,9 @@ function connectPrettierButton(projectSlug) {
     const result = await API.files.format(projectSlug, fileName);
     if (result instanceof Error) return;
     format.hidden = false;
-    const { view } = fileEntry.state;
     const content = await fetchFileContents(projectSlug, fileName);
     fileEntry.setState({ content });
-    view.dispatch({
-      changes: {
-        from: 0,
-        to: view.state.doc.length,
-        insert: content,
-      },
-    });
+    updateViewMaintainScroll(fileEntry, content);
   });
 }
 
