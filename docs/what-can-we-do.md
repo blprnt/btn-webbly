@@ -42,7 +42,7 @@ As a signed in and approved user you can do everything the platform was meant fo
   - you can create a folder called `.data` that counts as the only safe place to put private project data (This folder will not be copied over when someone remixes your project)
   - you can download your project as zip file with both public and private data included
   - you can force-restart your project's docker container, which is useful for when it gets stuck, or when you're running a project that doesn't auto-reload things when you change source files.
-- Remix projects, using the sparkle button. This creates a new copy of the public code parts with either a name you pick, or "yourusername-projectname" (so you'll probably want to rename it afterwards!). Note that you can remix _any_ project, so that includes your own!
+- Remix projects, using the remix link. This creates a new copy of the public code parts with either a name you pick, or "yourusername-projectname" (so you'll probably want to rename it afterwards!). Note that you can remix _any_ project, so that includes your own!
 
 ## admins
 
