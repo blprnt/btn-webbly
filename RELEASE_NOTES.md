@@ -1,5 +1,9 @@
 # Release notes
 
+## version 1.4
+
+This version has no public-facing changes, instead improving the way containers start up, with fixes relating to debugging and testing those parts of the code base.
+
 ## version 1.3
 
 Users can now reorder tabs in the editor, allowing in-browser ordering to match "best for work" ordering without having to open files in a specific order.
