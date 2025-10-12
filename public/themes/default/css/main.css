@@ -24,12 +24,6 @@ html {
     font-family: Verdana;
     font-size: 14px;
 
-    transition: opacity 5s ease-in;
-
-    &.fade-out {
-      opacity: 0;
-    }
-
     h1,
     h2,
     footer {
@@ -168,6 +162,37 @@ html {
           }
         }
       }
+
+      li.project-card {
+        h1 {
+          display: none;
+        }
+
+        &.loading {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          * {
+            display: none;
+          }
+          h1 {
+            display: inline-block;
+            border: none;
+            width: auto;
+            left: unset;
+            animation: fade-in-out 1s ease-in-out alternate-reverse infinite;
+          }
+        }
+      }
     }
+  }
+}
+
+@keyframes fade-in-out {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
   }
 }

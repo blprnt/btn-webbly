@@ -48,6 +48,8 @@
 <script defer>
   const loadLinks = document.querySelectorAll(`a.load-project`);
   loadLinks.forEach((a) =>
-    a.addEventListener(`click`, () => document.body.classList.add(`fade-out`)),
+    a.addEventListener(`click`, () => {
+      a.closest(`li`).classList.add(`loading`);
+    }),
   );
 </script>
