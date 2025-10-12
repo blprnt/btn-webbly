@@ -14,7 +14,7 @@ const right = document.getElementById(`right`);
 /**
  * Hook up the "Add new file" and "Format this file" buttons
  */
-export function addEventHandling() {
+export function setupUIEventHandling() {
   disableSaveHotkey();
   enableSettings();
   enableDownloadButton();
