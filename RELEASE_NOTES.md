@@ -1,5 +1,9 @@
 # Release notes
 
+## version 1.5 (12 October, 2025)
+
+Projects in user profiles are, just like the main page, ordered in reverse chronological order based on "last updated" timestamp
+
 ## version 1.4 (12 October, 2025)
 
 This version has no public-facing changes, instead improving the way containers start up, with fixes relating to debugging and testing those parts of the code base.
