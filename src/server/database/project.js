@@ -226,7 +226,7 @@ export function getProjectEnvironmentVariables(project) {
       .split(`\n`)
       .filter((v) => v.includes(`=`))
       .map((v) => v.trim().split(`=`))
-      .map(([k, v]) => [k.trim(), v.trim()]),
+      .map(([k, v]) => [k.trim(), v.trim()])
   );
 }
 
@@ -244,7 +244,11 @@ export function getProjectSuspensions(project, includeOld = false) {
  */
 export function getProjectListForUser(user) {
   const projects = Access.findAll({ user_id: user.id });
-  return projects.map((p) => Project.find({ id: p.project_id }));
+  return projects
+    .map((p) => Project.find({ id: p.project_id }))
+    .sort((a, b) => {
+      return a.updated_at < b.updated_at ? 1 : -1;
+    });
 }
 
 /**
@@ -252,7 +256,7 @@ export function getProjectListForUser(user) {
  */
 export function getProjectOwners(project) {
   return Access.findAll({ project_id: project.id }).map(({ user_id }) =>
-    User.find({ id: user_id }),
+    User.find({ id: user_id })
   );
 }
 
@@ -287,7 +291,7 @@ export function getStarterProjects() {
 export function isProjectSuspended(project) {
   return (
     ProjectSuspension.findAll({ project_id: project.id }).filter(
-      (s) => !s.invalidated_at,
+      (s) => !s.invalidated_at
     ).length > 0
   );
 }
