@@ -18,29 +18,10 @@ import { applyMigrations } from "./database/utils.js";
 const envPath = join(import.meta.dirname, `../../.env`);
 dotenv.config({ path: envPath, quiet: true });
 
-// Reset our caddy file
-setupCaddy();
-
-// Quick check: does docker work?
-try {
-  await execPromise(`docker ps`);
-} catch (e) {
-  console.error(e, `\nERROR: no Docker service is running!\n\n`);
-  process.exit(1);
-}
-
-// Second quick check: does caddy work?
-try {
-  await execPromise(`caddy --version`);
-} catch (e) {
-  console.error(`\nERROR: Caddy does not appear to be installed!\n\n`);
-  process.exit(1);
-}
-
 const PORT = process.env.PORT ?? 8000;
 const { WEB_EDITOR_HOSTNAME } = process.env;
 
-// Then set up the server:
+// Set up the server:
 const app = express();
 setupTemplating(app);
 setDefaultAspects(app);
@@ -56,6 +37,7 @@ server.listen(PORT, async () => {
   const mid = `=${` `.repeat(msg.length - 2)}=`;
   console.log([``, line, mid, msg, mid, line, ``].join(`\n`));
   watchForRebuild();
+  setupCaddy();
   startCaddy();
   scheduleContainerCheck();
 });

@@ -30698,9 +30698,16 @@ var FileTreeElement = class extends HTMLElement {
   set path(path2) {
     if (!path2) return;
     const pos = path2.endsWith(`/`) ? -2 : -1;
-    this.name = path2.split(`/`).at(pos).replace(/#.*/, ``);
+    const terms = path2.split(`/`);
+    const name2 = this.name = terms.at(pos).replace(/#.*/, ``);
     if (!this.name && path2) {
       throw Error(`why? path is ${path2}`);
+    }
+    if (this.isFile) {
+      const dot2 = name2.indexOf(`.`);
+      if (dot2 >= 0 && dot2 < name2.length - 1) {
+        this.extension = name2.substring(dot2 + 1);
+      }
     }
     const heading2 = this.find(`& > entry-heading`);
     heading2.textContent = this.name;
@@ -31228,11 +31235,10 @@ function processDragMove(dirEntry, entryId) {
   delete entry2.dataset.id;
   entry2.classList.remove(`dragging`);
   if (entry2 === dirEntry) return;
-  const oldPath = entry2.path;
   let dirPath = dirEntry.path;
   let newPath = (dirPath !== `.` ? dirPath : ``) + entry2.name;
   if (entry2.isDir) newPath += `/`;
-  dirEntry.root.moveEntry(entry2, oldPath, newPath);
+  dirEntry.root.moveEntry(entry2, newPath);
 }
 
 // node_modules/custom-file-tree/src/classes/dir-entry.js
@@ -31649,19 +31655,17 @@ var FileTree = class extends FileTreeElement {
   }
   // A rename is a relocation where only the last part of the path changed.
   renameEntry(entry2, newName) {
-    const isFile = !!entry2.isFile;
     const oldPath = entry2.path;
     const pos = oldPath.lastIndexOf(entry2.name);
     let newPath = oldPath.substring(0, pos) + newName;
     if (entry2.isDir) newPath += `/`;
     const eventType = (entry2.isFile ? `file` : `dir`) + `:rename`;
-    this.#relocateEntry(isFile, oldPath, newPath, eventType);
+    this.#relocateEntry(entry2, oldPath, newPath, eventType);
   }
   // A move is a relocation where everything *but* the last part of the path may have changed.
-  moveEntry(entry2, oldPath, newPath) {
-    const isFile = !!entry2.isFile;
+  moveEntry(entry2, newPath) {
     const eventType = (entry2.isFile ? `file` : `dir`) + `:move`;
-    this.#relocateEntry(isFile, oldPath, newPath, eventType);
+    this.#relocateEntry(entry2, entry2.path, newPath, eventType);
   }
   // Deletes are a DOM removal of the entry itself, and a pruning
   // of the path -> entry map for any entry that started with the
@@ -31727,7 +31731,7 @@ var FileTree = class extends FileTreeElement {
     return dir;
   }
   // private function for initiating <file-entry> or <dir-entry> path changes
-  #relocateEntry(isFile, oldPath, newPath, eventType) {
+  #relocateEntry(entry2, oldPath, newPath, eventType) {
     const { entries } = this;
     if (oldPath === newPath) return;
     if (newPath.startsWith(oldPath)) {
@@ -31749,8 +31753,8 @@ var FileTree = class extends FileTreeElement {
     }
     const detail = { oldPath, newPath };
     this.emit(eventType, detail, () => {
-      const entry2 = this.__move(isFile, oldPath, newPath);
-      this.OT?.move(isFile, oldPath, newPath);
+      this.__move(entry2.isFile, oldPath, newPath);
+      this.OT?.move(entry2.isFile, oldPath, newPath);
       detail.entry = entry2;
       return entry2;
     });
@@ -31832,6 +31836,7 @@ var FileTree = class extends FileTreeElement {
     });
   }
   toggleDirectory(entry2, detail = {}) {
+    if (entry2.isFile) return;
     const eventType = `dir:toggle`;
     detail.path = entry2.path;
     this.emit(eventType, detail, () => {
