@@ -151,16 +151,22 @@ function addFileTreeHandling() {
  * Check if the file tree needs more space
  */
 export function ensureFileTreeWidth() {
-  const wf = fileTree.scrollWidth;
+  // Get the column width, but if it's "fully" collapsed,
+  // just return, because the user will not want that expanded.
   const wc = col1.clientWidth;
+  if (wc < 16) return;
+
+  // If we're still here, do we need to the grow the column width?
+  const wf = fileTree.scrollWidth;
   const diff = wf - wc;
-  if (diff > 0) {
-    col1.parentNode.dispatchEvent(
-      new CustomEvent(`update:col1`, {
-        detail: { diff: diff + 16 },
-      }),
-    );
-  }
+  if (diff <= 0) return;
+
+  // If we're still here, we do. Fire off an update instruction.
+  col1.parentNode.dispatchEvent(
+    new CustomEvent(`update:col1`, {
+      detail: { diff: diff + 16 },
+    }),
+  );
 }
 
 // ==================

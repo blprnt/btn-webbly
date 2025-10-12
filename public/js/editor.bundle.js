@@ -32210,16 +32210,16 @@ function addFileTreeHandling() {
   addDirDelete(fileTree2, projectSlug3);
 }
 function ensureFileTreeWidth() {
-  const wf = fileTree2.scrollWidth;
   const wc = col1.clientWidth;
+  if (wc < 16) return;
+  const wf = fileTree2.scrollWidth;
   const diff2 = wf - wc;
-  if (diff2 > 0) {
-    col1.parentNode.dispatchEvent(
-      new CustomEvent(`update:col1`, {
-        detail: { diff: diff2 + 16 }
-      })
-    );
-  }
+  if (diff2 <= 0) return;
+  col1.parentNode.dispatchEvent(
+    new CustomEvent(`update:col1`, {
+      detail: { diff: diff2 + 16 }
+    })
+  );
 }
 async function addFileClick(fileTree3, projectSlug5) {
   fileTree3.addEventListener(`file:click`, async (evt) => {
