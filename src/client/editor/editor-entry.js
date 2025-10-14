@@ -3,7 +3,7 @@ import { setupView } from "./code-mirror-6.js";
 import { fetchFileContents, create, find } from "../utils/utils.js";
 import { getViewType, verifyViewType } from "../files/content-types.js";
 import { syncContent } from "../files/sync.js";
-import { ErrorNotice } from "../utils/notifications.js";
+import { ErrorNotice, Notice } from "../utils/notifications.js";
 import { Rewinder } from "../files/rewind.js";
 import { handleFileHistory } from "../files/websocket-interface.js";
 import { ensureFileTreeWidth } from "../files/file-tree-utils.js";
@@ -94,6 +94,7 @@ export class EditorEntry {
     } else {
       try {
         data = await fetchFileContents(projectSlug, path, mimetype);
+        if (data instanceof Error) data = undefined;
       } catch (e) {}
     }
     return data || new ErrorNotice(`Could not load ${path}`);
@@ -106,9 +107,11 @@ export class EditorEntry {
 
     const viewType = getViewType(filename);
     const { text, unknown, media, type } = viewType;
-    const data = await this.getFileData(path, type);
-    const verified = verifyViewType(viewType.type, data);
 
+    const data = await this.getFileData(path, type);
+    if (data instanceof Notice) return data;
+
+    const verified = verifyViewType(viewType.type, data);
     if (!verified) {
       return new ErrorNotice(
         `Content for ${path} does not match the file extension!`,

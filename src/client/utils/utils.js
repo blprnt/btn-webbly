@@ -46,6 +46,7 @@ export async function fetchFileContents(
   type = `text/plain`,
 ) {
   const response = await API.files.get(projectSlug, fileName);
+  if (response instanceof Error) return response;
   if (type.startsWith(`text`) || type.startsWith(`application`))
     return response.text();
   return response.arrayBuffer();

@@ -32,7 +32,10 @@ var API = {
     format: async (projectSlug5, fileName) => fetch2(`files/format/${projectSlug5}/${fileName}`, {
       method: `post`
     }),
-    get: async (projectSlug5, fileName) => fetch2(`files/content/${projectSlug5}/${fileName}`),
+    get: async (projectSlug5, fileName) => fetch2(`files/content/${projectSlug5}/${fileName}`).then((r) => {
+      if (r.ok) return r;
+      return new Error(`Fetch response not ok`);
+    }),
     history: async (projectSlug5, fileName) => fetch2(`files/history/${projectSlug5}/${fileName}`).then((r) => r.json()),
     rename: async (projectSlug5, oldPath, newPath) => fetch2(`files/rename/${projectSlug5}/${oldPath}:${newPath}`, {
       method: `post`
@@ -68,6 +71,7 @@ function create(tag, attributes = {}, evts = {}) {
 }
 async function fetchFileContents(projectSlug5, fileName, type = `text/plain`) {
   const response = await API.files.get(projectSlug5, fileName);
+  if (response instanceof Error) return response;
   if (type.startsWith(`text`) || type.startsWith(`application`))
     return response.text();
   return response.arrayBuffer();
@@ -31972,6 +31976,7 @@ var EditorEntry = class _EditorEntry {
     } else {
       try {
         data3 = await fetchFileContents(projectSlug2, path2, mimetype);
+        if (data3 instanceof Error) data3 = void 0;
       } catch (e2) {
       }
     }
@@ -31984,6 +31989,7 @@ var EditorEntry = class _EditorEntry {
     const viewType = getViewType(filename);
     const { text, unknown, media, type } = viewType;
     const data3 = await this.getFileData(path2, type);
+    if (data3 instanceof Notice) return data3;
     const verified = verifyViewType(viewType.type, data3);
     if (!verified) {
       return new ErrorNotice(
