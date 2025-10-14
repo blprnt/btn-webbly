@@ -23,7 +23,7 @@
     data-project-slug="{{ project.slug }}"
     data-default-file="{{ viewFile }}"
     data-default-collapse="{{ projectSettings.default_collapse }}"
-    data-use-websockets="{{ USE_WEBSOCKETS }}"
+    {% if USE_WEBSOCKETS == 'true' %}data-use-websockets="true"{% endif %}
   >
     <main class="three-column">
       <div class="left column">
