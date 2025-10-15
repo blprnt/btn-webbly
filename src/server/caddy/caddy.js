@@ -90,10 +90,11 @@ export function updateCaddyFile(project, port, env = process.env) {
   portBindings[slug].port = port;
 
   const data = readFileSync(caddyFile).toString();
-  const host = `${slug}.${env.WEB_EDITOR_APPS_HOSTNAME}`;
+  const host = `\n${slug}.${env.WEB_EDITOR_APPS_HOSTNAME}`;
   const index = data.indexOf(host);
+
+  // Update the binding
   if (index >= 0) {
-    // Update the binding
     const mark = `reverse_proxy localhost:`;
     const pos = data.indexOf(mark, index);
     if (pos !== -1) {
@@ -101,8 +102,10 @@ export function updateCaddyFile(project, port, env = process.env) {
       const suffix = data.substring(pos).replace(/:\d+/, `:${port}`);
       writeFileSync(caddyFile, prefix + suffix);
     }
-  } else {
-    // Create a new binding
+  }
+
+  // Create a new binding
+  else {
     const { TLS_DNS_PROVIDER, TLS_DNS_API_KEY } = env;
     const tls =
       !TLS_DNS_API_KEY || TLS_DNS_API_KEY === `false`
