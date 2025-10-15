@@ -11,14 +11,14 @@ import {
 import { getServiceDomain, validProviders } from "../routing/auth/settings.js";
 
 const {
-  User,
-  UserLink,
-  Project,
-  ProjectSettings,
   Access,
   Admin,
-  UserSuspension,
   Login,
+  Project,
+  ProjectSettings,
+  User,
+  UserLink,
+  UserSuspension,
 } = Models;
 
 // Ensure that the user slug is always up to date
@@ -191,6 +191,7 @@ export function getAllUsers() {
   admins.forEach((a) => {
     if (!a) return;
     userList[a.user_id].admin = true;
+    userList[a.user_id].superuser = !!a.is_superuser;
   });
 
   const suspensions = UserSuspension.all(`user_id`);
@@ -298,6 +299,24 @@ export function hasAccessToProject(user, projectSlugOrId) {
   const project = getProject(projectSlugOrId);
   const access = getAccessFor(user, project);
   return access >= MEMBER;
+}
+
+/**
+ * ...docs go here...
+ */
+export function isSuperUser(user) {
+  const a = Admin.find({ user_id: user.id });
+  return a.is_superuser === 1;
+}
+
+/**
+ * Make a user with admin rights a superuser
+ */
+export function toggleSuperUser(user) {
+  const a = Admin.find({ user_id: user.id });
+  a.is_superuser = a.is_superuser === 0 ? 1 : 0;
+  Admin.save(a);
+  return a.is_superuser === 1;
 }
 
 /**
