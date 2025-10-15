@@ -28,7 +28,6 @@ As a registered user whose account has not yet been activated, you can do the sa
 - Log using any of your chosen providers, which will "land" you on your personal page. Although the only thing that'll let you do is log out, or open your profile page.
 - Edit your profile in terms of your bio (which you can write using markdown) and the links you want people to see (like your homepage, github profile url, mastodon account, etc. etc)
 
-
 ## registered, activated user
 
 As a signed in and approved user you can do everything the platform was meant for:
@@ -55,3 +54,5 @@ As an admin, you can do everything a regular user can do, but also...
   - see a list of active static servers, with an option to stop them.
 
 You are also able to load suspended projects in the editor, so you can see what a project does without "running" it, and inspect and edit other folk's project settings.
+
+Finally, as admin you toggle your `superuser` flag, which lets you perform things like editing files in any user's projects, including updating project settings.
