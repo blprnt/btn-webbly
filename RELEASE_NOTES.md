@@ -1,5 +1,11 @@
 # Release notes
 
+## version 1.8 (15 October 2025)
+
+This release adds a dedicated "superuser" flag for admins, so that they can use the system like any other user unless and until they turn on superuser mode on the admin page. With superuser turned off, loading someone else's project will show you the same things, with the same edit rights, as any other authenticated user would see. However, with superuser turned on, admins can edit files, update project settings, etc. as if they were that project's owner.
+
+This release also includes fixes to code relating to resolving host names, where the code could accidentally match "xyz" again "abc-xyz", which was particularly problematic for default-named project remixes (which turn into username-startername).
+
 ## version 1.7 (14 October 2025)
 
 Users can now load the starter projects in the editor like any other project, which also means they are now available as normal "project cards" on a logged in users's main page, rather than being a drop down selector. Starter project cards both link to the editor, and directly to the remix URL if users already know they want to remix it.
