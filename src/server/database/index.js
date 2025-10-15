@@ -1,5 +1,4 @@
 import { join } from "node:path";
-import { applyMigrations } from "./utils.js";
 
 import {
   readContentDir,
@@ -33,6 +32,8 @@ import {
   getUserSuspensions,
   hasAccessToUserRecords,
   hasAccessToProject,
+  isSuperUser,
+  toggleSuperUser,
   processUserLogin,
   processUserSignup,
   removeAuthProvider,
@@ -53,6 +54,8 @@ export {
   getUserSuspensions,
   hasAccessToUserRecords,
   hasAccessToProject,
+  isSuperUser,
+  toggleSuperUser,
   processUserLogin,
   processUserSignup,
   removeAuthProvider,
@@ -131,10 +134,6 @@ export async function getMigrationStatus() {
  */
 export async function initTestDatabase() {
   if (!TESTING) return;
-
-  // Ensure the test database is up to date
-  await applyMigrations(join(dataPath, `test.sqlite3`));
-
   const now = scrubDateTime(new Date().toISOString());
 
   // Create an admin user

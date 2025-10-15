@@ -1,6 +1,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { execSync, spawn } from "node:child_process";
 import { join } from "node:path";
+import { scheduleScreenShot } from "../screenshots/screenshot.js";
 
 const caddyFile = join(import.meta.dirname, `Caddyfile`);
 const defaultCaddyFile = join(import.meta.dirname, `Caddyfile.default`);
@@ -16,7 +17,7 @@ export function removeCaddyEntry(project, env = process.env) {
   const re = new RegExp(`\\n${host}\\s*\\{[\\w\\W]+?\\n\\}\\n`, `gm`);
   const data = readFileSync(caddyFile).toString().replace(re, ``);
   writeFileSync(caddyFile, data);
-  spawn(`caddy`, [`reload`, `--config`, caddyFile], {
+  spawn(`caddy reload --config ${caddyFile}`, {
     shell: true,
     // stdio: `inherit`,
   });
@@ -48,7 +49,7 @@ export function startCaddy() {
     .toString()
     .match(/{[\s\r\n]*debug[\s\r\n]*}/);
 
-  spawn(`caddy`, [`start`, `--config`, caddyFile], {
+  spawn(`caddy start --config ${caddyFile}`, {
     shell: true,
     stdio: DEBUG ? `inherit` : `ignore`,
   });
@@ -120,10 +121,12 @@ ${host} {
     portBindings[slug].port = port;
   }
 
-  spawn(`caddy`, [`reload`, `--config`, caddyFile], {
+  spawn(`caddy reload --config ${caddyFile}`, {
     shell: true,
     stdio: `ignore`,
   });
+
+  scheduleScreenShot(project);
 
   return portBindings[slug];
 }

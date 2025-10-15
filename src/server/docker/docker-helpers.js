@@ -1,12 +1,20 @@
 import { sep } from "node:path";
-import { getFreePort } from "../../helpers.js";
+import {
+  CONTENT_BASE,
+  getFreePort,
+  STARTER_BASE,
+  TESTING,
+} from "../../helpers.js";
 import { exec, execSync } from "child_process";
 import {
   portBindings,
   removeCaddyEntry,
   updateCaddyFile,
 } from "../caddy/caddy.js";
-import { getProjectEnvironmentVariables } from "../database/index.js";
+import {
+  getProjectEnvironmentVariables,
+  isStarterProject,
+} from "../database/index.js";
 import { scheduleScreenShot } from "../screenshots/screenshot.js";
 
 /**
@@ -35,12 +43,12 @@ export function checkContainerHealth(project, slug = project.slug) {
  */
 export function deleteContainer(project, slug = project.slug) {
   try {
-    execSync(`docker container rm ${slug}`);
+    execSync(`docker container rm ${slug}`, { stdio: `ignore` });
   } catch (e) {
     // failure just means it's already been removed.
   }
   try {
-    execSync(`docker image rm ${slug}`);
+    execSync(`docker image rm ${slug}`, { stdio: `ignore` });
   } catch (e) {
     // idem dito
   }
@@ -130,15 +138,18 @@ export async function restartContainer(project, rebuild = false) {
 export async function runContainer(project, slug = project.slug) {
   // note: we assume the caller already checked for project
   // suspension, so we don't try to use the database here.
+  const isStarter = isStarterProject(project);
 
   console.log(`attempting to run container ${slug}`);
   let port = await getFreePort();
 
-  // Do we have a container? If not, build one.
+  // Do we have an image?
   console.log(`- Checking for image`);
   let result = execSync(`docker image list`).toString().trim();
+  const foundProject = () => result.match(new RegExp(`^${slug}\\b`, `gm`));
 
-  if (!result.match(new RegExp(`\\b${slug}\\b`, `gm`))) {
+  // If not, build one.
+  if (!foundProject()) {
     console.log(`- Building image`);
     try {
       execSync(`docker build --tag ${slug} --no-cache .`, {
@@ -150,47 +161,44 @@ export async function runContainer(project, slug = project.slug) {
     }
   }
 
-  // FIXME: TODO: check if `docker ps -a` has a dead container that we need to cleanup. https://github.com/Pomax/make-webbly-things/issues/109
+  // We know there's an image now, but: is it running as container?
 
+  // FIXME: TODO: check if `docker ps -a` has a dead container that we need to cleanup. https://github.com/Pomax/make-webbly-things/issues/109
   console.log(`- Checking for running container`);
   const check = `docker ps --no-trunc -f name=^/${slug}$`;
   result = execSync(check).toString().trim();
 
-  if (!result.match(new RegExp(`\\b${slug}\\b`, `gm`))) {
+  // There is no running container: start one
+  if (!foundProject()) {
     console.log(`- Starting container on port ${port}`);
-    const runFlags = `--rm --stop-timeout 0 --name ${slug}`;
-    //const bindMount = `--mount type=bind,src=.${sep}content${sep}${slug},dst=/app`;
-    const bindMount = `--mount type=bind,src=${process.cwd()}${sep}content${sep}${slug},dst=/app`;
+
+    const runFlags = `--detach --rm --stop-timeout 0 --name ${slug}`;
+    const base = isStarter ? STARTER_BASE : CONTENT_BASE;
+    const bindMount = `--mount type=bind,src=.${sep}${base}${sep}${slug},dst=/app`;
     const envVars = Object.entries(getProjectEnvironmentVariables(project))
       .map(([k, v]) => `-e ${k}="${v}"`)
       .join(` `);
     const entry = `/bin/sh .container/run.sh`;
     const runCommand = `docker run ${runFlags} ${bindMount} -p ${port}:8000 ${envVars} ${slug} ${entry}`;
-    console.log(runCommand);
-    exec(runCommand);
+    if (TESTING) console.log({ runCommand });
+    execSync(runCommand);
   }
 
-  // FIXME: TODO: it would be nice if we could just "check until we know" rather than
-  //              using a 2 second timeout to see what the actual port is. Because
-  //              despite all logic, I've seen docker pick a *different* port than
-  //              the one the run command instructs it to use O_o
-  //              https://github.com/Pomax/make-webbly-things/issues/100
-  await new Promise((resolve) => {
-    setTimeout(() => {
-      result = execSync(check).toString().trim();
-      resolve();
-    }, 2000);
-  });
+  const updatePortBinding = async () => {
+    result = execSync(check).toString().trim();
+    const runningPort = result.match(/0.0.0.0:(\d+)->/m)?.[1];
+    if (runningPort) {
+      console.log(`- found port from container: ${runningPort}`);
+      return runningPort;
+    }
+    console.log(`- no network binding (yet), retrying in 500ms`);
+    return new Promise((resolve) => {
+      setTimeout(() => resolve(updatePortBinding()), 500);
+    });
+  };
 
-  try {
-    port = result.match(/0.0.0.0:(\d+)->/m)[1];
-    console.log(`- found a running container on port ${port}`);
-  } catch (e) {
-    console.log(`could not get the port from docker...`);
-  }
-
+  port = await updatePortBinding();
   updateCaddyFile(project, port);
-
   return `success`;
 }
 
@@ -209,8 +217,15 @@ export async function runStaticServer(project) {
   console.log(`attempting to run static server for ${slug} on port ${port}`);
   const s = project.settings;
   const root = s.root_dir === null ? `` : s.root_dir;
-  const runCommand = `node src/server/static.js --project ${slug} --port ${port} --root "${root}"`;
-  console.log(runCommand);
+  const isStarter = isStarterProject(project);
+  const opts = [
+    `--project ${slug}`,
+    `--port ${port}`,
+    `--root "${root}"`,
+    isStarter ? `--starter` : ``,
+  ].join(` `);
+  const runCommand = `node src/server/static.js ${opts}`;
+  if (TESTING) console.log({ runCommand });
   const child = exec(runCommand, { shell: true, stdio: `inherit` });
   const binding = updateCaddyFile(project, port);
   binding.serverProcess = child;
@@ -221,7 +236,7 @@ export async function runStaticServer(project) {
  */
 export function stopContainer(project, slug = project.slug) {
   try {
-    execSync(`docker container stop ${slug}`);
+    execSync(`docker container stop ${slug}`, { stdio: `ignore` });
   } catch (e) {
     // failure just means it's already no longer running.
   }

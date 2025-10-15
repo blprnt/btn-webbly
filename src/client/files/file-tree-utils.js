@@ -2,12 +2,13 @@ import { API } from "../utils/api.js";
 import { ErrorNotice, Warning } from "../utils/notifications.js";
 import { getMimeType } from "./content-types.js";
 import { updatePreview } from "../preview/preview.js";
-import { getOrCreateFileEditTab } from "../editor/editor-components.js";
+import { getOrCreateFileEditTab } from "../editor/editor-entry.js";
 import { DEFAULT_FILES } from "./default-files.js";
 import { unzip } from "/vendor/unzipit.module.js";
 import { CustomWebsocketInterface } from "./websocket-interface.js";
 import { Rewinder } from "./rewind.js";
 import { handleFileHistory } from "./websocket-interface.js";
+import { supportFileExtension } from "./inject-file-tree-icons.js";
 
 const RETRY_INTERVAL = 3000;
 const MAX_RETRIES = 5;
@@ -26,6 +27,10 @@ const col1 = document.querySelector(`.left.column`);
  */
 fileTree.addEventListener(`tree:ready`, async () => {
   let fileEntry;
+
+  fileTree
+    .findAll(`file-entry`)
+    .forEach(({ extension }) => supportFileExtension(extension));
 
   if (defaultFile) {
     fileEntry = fileTree.querySelector(`file-entry[path="${defaultFile}"]`);
@@ -151,16 +156,22 @@ function addFileTreeHandling() {
  * Check if the file tree needs more space
  */
 export function ensureFileTreeWidth() {
-  const wf = fileTree.scrollWidth;
+  // Get the column width, but if it's "fully" collapsed,
+  // just return, because the user will not want that expanded.
   const wc = col1.clientWidth;
+  if (wc < 16) return;
+
+  // If we're still here, do we need to the grow the column width?
+  const wf = fileTree.scrollWidth;
   const diff = wf - wc;
-  if (diff > 0) {
-    col1.parentNode.dispatchEvent(
-      new CustomEvent(`update:col1`, {
-        detail: { diff: diff + 16 },
-      }),
-    );
-  }
+  if (diff <= 0) return;
+
+  // If we're still here, we do. Fire off an update instruction.
+  col1.parentNode.dispatchEvent(
+    new CustomEvent(`update:col1`, {
+      detail: { diff: diff + 16 },
+    }),
+  );
 }
 
 // ==================
@@ -288,9 +299,10 @@ async function addFileCreate(fileTree, projectSlug) {
 
       // Single file upload
       else {
-        const entry = await uploadFile(fileTree, path, content, grant);
+        const fileEntry = await uploadFile(fileTree, path, content, grant);
         if (!bulk && !bulkUploadPaths.includes(path)) {
-          getOrCreateFileEditTab(entry, projectSlug, path);
+          supportFileExtension(fileEntry.extension);
+          getOrCreateFileEditTab(fileEntry, projectSlug, path);
         }
       }
 
@@ -301,6 +313,7 @@ async function addFileCreate(fileTree, projectSlug) {
     else {
       const runCreate = () => {
         const fileEntry = grant();
+        supportFileExtension(fileEntry.extension);
         getOrCreateFileEditTab(fileEntry, projectSlug, path);
       };
 
@@ -363,6 +376,7 @@ async function addFileMove(fileTree, projectSlug) {
 
     const runMove = () => {
       const fileEntry = grant();
+      supportFileExtension(fileEntry.extension);
       updateEditorBindings(fileEntry);
     };
 
@@ -405,8 +419,8 @@ async function addFileDelete(fileTree, projectSlug) {
 
     const runDelete = () => {
       const [entry] = grant();
-      const { close } = entry.state ?? {};
-      close?.click();
+      const { editorEntry } = entry.state ?? {};
+      editorEntry?.unload();
     };
 
     if (fileTree.OT) {
@@ -435,8 +449,8 @@ async function addFileDelete(fileTree, projectSlug) {
   fileTree.addEventListener(`ot:deleted`, async (evt) => {
     const { entries } = evt.detail;
     const [fileEntry] = entries;
-    const { close } = fileEntry.state ?? {};
-    close?.click();
+    const { editorEntry } = fileEntry.state ?? {};
+    editorEntry?.unload();
   });
 }
 

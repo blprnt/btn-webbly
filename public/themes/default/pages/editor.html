@@ -23,7 +23,7 @@
     data-project-slug="{{ project.slug }}"
     data-default-file="{{ viewFile }}"
     data-default-collapse="{{ projectSettings.default_collapse }}"
-    data-use-websockets="{{ USE_WEBSOCKETS }}"
+    {% if USE_WEBSOCKETS == 'true' %}data-use-websockets="true"{% endif %}
   >
     <main class="three-column">
       <div class="left column">
@@ -40,32 +40,37 @@
                 class="link-remix"
                 title="Remix this project!"
                 href="/v1/projects/remix/{{ project.slug }}"
-                >✨</a
+                >remix</a
               >
             {% endif %}
           </div>
           <div>
-            {% if user and (user.admin or projectOwner) %}
-              <button
-                class="project-settings"
-                title="change your project settings"
-              >
-                settings
-              </button>
-            {% endif %}
-            {% if user and user.enabled_at %}
-              <button id="download" title="Download this project as a .zip">
-                💾
-              </button>
-            {% endif %}
-            {% if user and (user.admin or projectMember) %}
-              <button id="format" title="Make my code pretty!">🤩</button>
-              <button id="rewind" title="Use the time machine!">🔄</button>
+            {% if user %}
+              {% if user.superuser or projectOwner %}
+                <button
+                  class="project-settings"
+                  title="change your project settings"
+                >
+                  settings
+                </button>
+              {% endif %}
+              {% if user.enabled_at and not starter %}
+                <button id="download" title="Download this project as a .zip">
+                  💾
+                </button>
+              {% endif %}
+              {% if user.superuser or projectMember %}
+                <button id="format" title="Make my code pretty!">🤩</button>
+                <button id="rewind" title="Use the time machine!">🔄</button>
+              {% endif %}
             {% endif %}
           </div>
         </div>
 
-        <file-tree id="filetree"></file-tree>
+        <file-tree
+          id="filetree"
+          {% if not projectMember %}readonly{% endif %}
+        ></file-tree>
       </div>
 
       <div class="full resize">

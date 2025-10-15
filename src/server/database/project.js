@@ -244,7 +244,11 @@ export function getProjectSuspensions(project, includeOld = false) {
  */
 export function getProjectListForUser(user) {
   const projects = Access.findAll({ user_id: user.id });
-  return projects.map((p) => Project.find({ id: p.project_id }));
+  return projects
+    .map((p) => Project.find({ id: p.project_id }))
+    .sort((a, b) => {
+      return a.updated_at < b.updated_at ? 1 : -1;
+    });
 }
 
 /**
@@ -371,7 +375,7 @@ export function suspendProject(project, reason, notes = ``) {
     return ProjectSuspension.create({ project_id: project.id, reason, notes });
   } catch (e) {
     console.error(e);
-    console.log(u, reason, notes);
+    console.log({ project, reason, notes });
   }
 }
 

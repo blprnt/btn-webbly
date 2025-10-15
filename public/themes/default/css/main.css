@@ -74,6 +74,11 @@ html {
       flex-wrap: wrap;
       gap: 0.5em;
 
+      &.one-row {
+        height: 400px;
+        overflow: auto;
+      }
+
       li {
         position: relative;
         background: #fffdfa;
@@ -162,6 +167,37 @@ html {
           }
         }
       }
+
+      li.project-card {
+        h1 {
+          display: none;
+        }
+
+        &.loading {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          * {
+            display: none;
+          }
+          h1 {
+            display: inline-block;
+            border: none;
+            width: auto;
+            left: unset;
+            animation: fade-in-out 1s ease-in-out alternate-reverse infinite;
+          }
+        }
+      }
     }
+  }
+}
+
+@keyframes fade-in-out {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
   }
 }

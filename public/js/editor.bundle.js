@@ -32,7 +32,10 @@ var API = {
     format: async (projectSlug5, fileName) => fetch2(`files/format/${projectSlug5}/${fileName}`, {
       method: `post`
     }),
-    get: async (projectSlug5, fileName) => fetch2(`files/content/${projectSlug5}/${fileName}`),
+    get: async (projectSlug5, fileName) => fetch2(`files/content/${projectSlug5}/${fileName}`).then((r) => {
+      if (r.ok) return r;
+      return new Error(`Fetch response not ok`);
+    }),
     history: async (projectSlug5, fileName) => fetch2(`files/history/${projectSlug5}/${fileName}`).then((r) => r.json()),
     rename: async (projectSlug5, oldPath, newPath) => fetch2(`files/rename/${projectSlug5}/${oldPath}:${newPath}`, {
       method: `post`
@@ -68,6 +71,7 @@ function create(tag, attributes = {}, evts = {}) {
 }
 async function fetchFileContents(projectSlug5, fileName, type = `text/plain`) {
   const response = await API.files.get(projectSlug5, fileName);
+  if (response instanceof Error) return response;
   if (type.startsWith(`text`) || type.startsWith(`application`))
     return response.text();
   return response.arrayBuffer();
@@ -80,9 +84,9 @@ function listEquals(a1, a2) {
   if (a1.length !== a2.length) return false;
   return a1.every((v, i) => a2[i] === v);
 }
-async function updateViewMaintainScroll(entry, content2 = entry.content, editable3 = true) {
-  const { view } = entry;
-  entry.setEditable(editable3);
+async function updateViewMaintainScroll2(editorEntry, content2 = editorEntry.content, editable3 = editorEntry.editable) {
+  const { view } = editorEntry;
+  editorEntry.setEditable(editable3);
   const { doc: doc2, selection } = view.state;
   const cursor = doc2.lineAt(selection.main.head);
   const line = doc2.line(cursor.number);
@@ -7978,10 +7982,10 @@ function dist(a, b) {
   return Math.max(Math.abs(a.clientX - b.clientX), Math.abs(a.clientY - b.clientY));
 }
 var MouseSelection = class {
-  constructor(view, startEvent, style, mustSelect) {
+  constructor(view, startEvent, style2, mustSelect) {
     this.view = view;
     this.startEvent = startEvent;
-    this.style = style;
+    this.style = style2;
     this.mustSelect = mustSelect;
     this.scrollSpeed = { x: 0, y: 0 };
     this.scrolling = -1;
@@ -8186,17 +8190,17 @@ handlers.mousedown = (view, event) => {
   view.observer.flush();
   if (view.inputState.lastTouchTime > Date.now() - 2e3)
     return false;
-  let style = null;
+  let style2 = null;
   for (let makeStyle of view.state.facet(mouseSelectionStyle)) {
-    style = makeStyle(view, event);
-    if (style)
+    style2 = makeStyle(view, event);
+    if (style2)
       break;
   }
-  if (!style && event.button == 0)
-    style = basicMouseSelection(view, event);
-  if (style) {
+  if (!style2 && event.button == 0)
+    style2 = basicMouseSelection(view, event);
+  if (style2) {
     let mustFocus = !view.hasFocus;
-    view.inputState.startMouseSelection(new MouseSelection(view, event, style, mustFocus));
+    view.inputState.startMouseSelection(new MouseSelection(view, event, style2, mustFocus));
     if (mustFocus)
       view.observer.ignore(() => {
         focusPreventScroll(view.contentDOM);
@@ -9251,15 +9255,15 @@ function visiblePixelRange(dom, paddingTop) {
   for (let parent = dom.parentNode; parent && parent != doc2.body; ) {
     if (parent.nodeType == 1) {
       let elt2 = parent;
-      let style = window.getComputedStyle(elt2);
-      if ((elt2.scrollHeight > elt2.clientHeight || elt2.scrollWidth > elt2.clientWidth) && style.overflow != "visible") {
+      let style2 = window.getComputedStyle(elt2);
+      if ((elt2.scrollHeight > elt2.clientHeight || elt2.scrollWidth > elt2.clientWidth) && style2.overflow != "visible") {
         let parentRect = elt2.getBoundingClientRect();
         left2 = Math.max(left2, parentRect.left);
         right2 = Math.min(right2, parentRect.right);
         top2 = Math.max(top2, parentRect.top);
         bottom = Math.min(parent == dom.parentNode ? win.innerHeight : bottom, parentRect.bottom);
       }
-      parent = style.position == "absolute" || style.position == "fixed" ? elt2.offsetParent : elt2.parentNode;
+      parent = style2.position == "absolute" || style2.position == "fixed" ? elt2.offsetParent : elt2.parentNode;
     } else if (parent.nodeType == 11) {
       parent = parent.host;
     } else {
@@ -9430,10 +9434,10 @@ var ViewState = class {
       this.mustEnforceCursorAssoc = true;
   }
   measure(view) {
-    let dom = view.contentDOM, style = window.getComputedStyle(dom);
+    let dom = view.contentDOM, style2 = window.getComputedStyle(dom);
     let oracle = this.heightOracle;
-    let whiteSpace = style.whiteSpace;
-    this.defaultTextDirection = style.direction == "rtl" ? Direction.RTL : Direction.LTR;
+    let whiteSpace = style2.whiteSpace;
+    this.defaultTextDirection = style2.direction == "rtl" ? Direction.RTL : Direction.LTR;
     let refresh2 = this.heightOracle.mustRefreshForWrapping(whiteSpace);
     let domRect = dom.getBoundingClientRect();
     let measureContent = refresh2 || this.mustMeasureContent || this.contentDOMHeight != domRect.height;
@@ -9449,8 +9453,8 @@ var ViewState = class {
         refresh2 = measureContent = true;
       }
     }
-    let paddingTop = (parseInt(style.paddingTop) || 0) * this.scaleY;
-    let paddingBottom = (parseInt(style.paddingBottom) || 0) * this.scaleY;
+    let paddingTop = (parseInt(style2.paddingTop) || 0) * this.scaleY;
+    let paddingBottom = (parseInt(style2.paddingBottom) || 0) * this.scaleY;
     if (this.paddingTop != paddingTop || this.paddingBottom != paddingBottom) {
       this.paddingTop = paddingTop;
       this.paddingBottom = paddingBottom;
@@ -10658,8 +10662,8 @@ var EditContextManager = class {
         if (lineStyle != "None" && thickness != "None") {
           let from = this.toEditorPos(format.rangeStart), to = this.toEditorPos(format.rangeEnd);
           if (from < to) {
-            let style = `text-decoration: underline ${lineStyle == "Dashed" ? "dashed " : lineStyle == "Squiggle" ? "wavy " : ""}${thickness == "Thin" ? 1 : 2}px`;
-            deco.push(Decoration.mark({ attributes: { style } }).range(from, to));
+            let style2 = `text-decoration: underline ${lineStyle == "Dashed" ? "dashed " : lineStyle == "Squiggle" ? "wavy " : ""}${thickness == "Thin" ? 1 : 2}px`;
+            deco.push(Decoration.mark({ attributes: { style: style2 } }).range(from, to));
           }
         }
       }
@@ -11532,9 +11536,9 @@ var EditorView = class _EditorView {
     if (line.length > MaxBidiLine)
       return trivialOrder(line.length);
     let dir = this.textDirectionAt(line.from), isolates;
-    for (let entry of this.bidiCache) {
-      if (entry.from == line.from && entry.dir == dir && (entry.fresh || isolatesEq(entry.isolates, isolates = getIsolatedRanges(this, line))))
-        return entry.order;
+    for (let entry2 of this.bidiCache) {
+      if (entry2.from == line.from && entry2.dir == dir && (entry2.fresh || isolatesEq(entry2.isolates, isolates = getIsolatedRanges(this, line))))
+        return entry2.order;
     }
     if (!isolates)
       isolates = getIsolatedRanges(this, line);
@@ -11745,9 +11749,9 @@ var CachedOrder = class _CachedOrder {
       return cache2;
     let result = [], lastDir = cache2.length ? cache2[cache2.length - 1].dir : Direction.LTR;
     for (let i = Math.max(0, cache2.length - 10); i < cache2.length; i++) {
-      let entry = cache2[i];
-      if (entry.dir == lastDir && !changes.touchesRange(entry.from, entry.to))
-        result.push(new _CachedOrder(changes.mapPos(entry.from, 1), changes.mapPos(entry.to, -1), entry.dir, entry.isolates, false, entry.order));
+      let entry2 = cache2[i];
+      if (entry2.dir == lastDir && !changes.touchesRange(entry2.from, entry2.to))
+        result.push(new _CachedOrder(changes.mapPos(entry2.from, 1), changes.mapPos(entry2.to, -1), entry2.dir, entry2.isolates, false, entry2.order));
     }
     return result;
   }
@@ -16218,12 +16222,12 @@ var Rule = class {
 Rule.empty = new Rule([], 2, null);
 function tagHighlighter(tags3, options) {
   let map = /* @__PURE__ */ Object.create(null);
-  for (let style of tags3) {
-    if (!Array.isArray(style.tag))
-      map[style.tag.id] = style.class;
+  for (let style2 of tags3) {
+    if (!Array.isArray(style2.tag))
+      map[style2.tag.id] = style2.class;
     else
-      for (let tag of style.tag)
-        map[tag.id] = style.class;
+      for (let tag of style2.tag)
+        map[tag.id] = style2.class;
   }
   let { scope, all = null } = options || {};
   return {
@@ -17296,10 +17300,10 @@ var LanguageSupport = class {
   }
 };
 var LanguageDescription = class _LanguageDescription {
-  constructor(name2, alias, extensions, filename, loadFunc, support = void 0) {
+  constructor(name2, alias, extensions2, filename, loadFunc, support = void 0) {
     this.name = name2;
     this.alias = alias;
-    this.extensions = extensions;
+    this.extensions = extensions2;
     this.filename = filename;
     this.loadFunc = loadFunc;
     this.support = support;
@@ -18011,9 +18015,9 @@ var HighlightStyle = class _HighlightStyle {
     const all = typeof options.all == "string" ? options.all : options.all ? def(options.all) : void 0;
     const scopeOpt = options.scope;
     this.scope = scopeOpt instanceof Language ? (type) => type.prop(languageDataProp) == scopeOpt.data : scopeOpt ? (type) => type == scopeOpt : void 0;
-    this.style = tagHighlighter(specs.map((style) => ({
-      tag: style.tag,
-      class: style.class || def(Object.assign({}, style, { tag: null }))
+    this.style = tagHighlighter(specs.map((style2) => ({
+      tag: style2.tag,
+      class: style2.class || def(Object.assign({}, style2, { tag: null }))
     })), {
       all
     }).style;
@@ -18091,8 +18095,8 @@ var TreeHighlighter = class {
       return Decoration.none;
     let builder = new RangeSetBuilder();
     for (let { from, to } of view.visibleRanges) {
-      highlightTree(this.tree, highlighters, (from2, to2, style) => {
-        builder.add(from2, to2, this.markCache[style] || (this.markCache[style] = Decoration.mark({ class: style })));
+      highlightTree(this.tree, highlighters, (from2, to2, style2) => {
+        builder.add(from2, to2, this.markCache[style2] || (this.markCache[style2] = Decoration.mark({ class: style2 })));
       }, from, to);
     }
     return builder.finish();
@@ -24865,10 +24869,10 @@ var parser = LRParser.deserialize({
 var _properties = null;
 function properties() {
   if (!_properties && typeof document == "object" && document.body) {
-    let { style } = document.body, names = [], seen = /* @__PURE__ */ new Set();
-    for (let prop in style)
+    let { style: style2 } = document.body, names = [], seen = /* @__PURE__ */ new Set();
+    for (let prop in style2)
       if (prop != "cssText" && prop != "cssFloat") {
-        if (typeof style[prop] == "string") {
+        if (typeof style2[prop] == "string") {
           if (/[A-Z]/.test(prop))
             prop = prop.replace(/[A-Z]/g, (ch) => "-" + ch.toLowerCase());
           if (!seen.has(prop)) {
@@ -26028,9 +26032,9 @@ function maybeNest(node, input, tags3) {
   return null;
 }
 function configureNesting(tags3 = [], attributes = []) {
-  let script = [], style = [], textarea = [], other = [];
+  let script = [], style2 = [], textarea = [], other = [];
   for (let tag of tags3) {
-    let array = tag.tag == "script" ? script : tag.tag == "style" ? style : tag.tag == "textarea" ? textarea : other;
+    let array = tag.tag == "script" ? script : tag.tag == "style" ? style2 : tag.tag == "textarea" ? textarea : other;
     array.push(tag);
   }
   let attrs = attributes.length ? /* @__PURE__ */ Object.create(null) : null;
@@ -26038,7 +26042,7 @@ function configureNesting(tags3 = [], attributes = []) {
   return parseMixed((node, input) => {
     let id2 = node.type.id;
     if (id2 == ScriptText) return maybeNest(node, input, script);
-    if (id2 == StyleText) return maybeNest(node, input, style);
+    if (id2 == StyleText) return maybeNest(node, input, style2);
     if (id2 == TextareaText) return maybeNest(node, input, textarea);
     if (id2 == Element && other.length) {
       let n = node.node, open = n.firstChild, tagName = open && findTagName(open, input), attrs2;
@@ -28291,7 +28295,7 @@ var MarkdownParser = class _MarkdownParser extends Parser {
       skipContextMarkup = Object.assign({}, skipContextMarkup);
       let nodeTypes2 = nodeSet.types.slice(), styles;
       for (let s of config2.defineNodes) {
-        let { name: name2, block, composite, style } = typeof s == "string" ? { name: s } : s;
+        let { name: name2, block, composite, style: style2 } = typeof s == "string" ? { name: s } : s;
         if (nodeTypes2.some((t2) => t2.name == name2))
           continue;
         if (composite)
@@ -28303,13 +28307,13 @@ var MarkdownParser = class _MarkdownParser extends Parser {
           name: name2,
           props: group && [[NodeProp.group, group]]
         }));
-        if (style) {
+        if (style2) {
           if (!styles)
             styles = {};
-          if (Array.isArray(style) || style instanceof Tag)
-            styles[name2] = style;
+          if (Array.isArray(style2) || style2 instanceof Tag)
+            styles[name2] = style2;
           else
-            Object.assign(styles, style);
+            Object.assign(styles, style2);
         }
       }
       nodeSet = new NodeSet(nodeTypes2);
@@ -29685,7 +29689,7 @@ function markdown(config2 = {}) {
   let { codeLanguages, defaultCodeLanguage, addKeymap = true, base: { parser: parser5 } = commonmarkLanguage, completeHTMLTags = true, htmlTagLanguage = htmlNoMatch } = config2;
   if (!(parser5 instanceof MarkdownParser))
     throw new RangeError("Base parser provided to `markdown` should be a Markdown parser");
-  let extensions = config2.extensions ? [config2.extensions] : [];
+  let extensions2 = config2.extensions ? [config2.extensions] : [];
   let support = [htmlTagLanguage.support, headerIndent], defaultCode;
   if (defaultCodeLanguage instanceof LanguageSupport) {
     support.push(defaultCodeLanguage.support);
@@ -29694,10 +29698,10 @@ function markdown(config2 = {}) {
     defaultCode = defaultCodeLanguage;
   }
   let codeParser = codeLanguages || defaultCode ? getCodeParser(codeLanguages, defaultCode) : void 0;
-  extensions.push(parseCode({ codeParser, htmlParser: htmlTagLanguage.language.parser }));
+  extensions2.push(parseCode({ codeParser, htmlParser: htmlTagLanguage.language.parser }));
   if (addKeymap)
     support.push(Prec.high(keymap.of(markdownKeymap)));
-  let lang = mkLang(parser5.configure(extensions));
+  let lang = mkLang(parser5.configure(extensions2));
   if (completeHTMLTags)
     support.push(lang.data.of({ autocomplete: htmlTagCompletion }));
   return new LanguageSupport(lang, support);
@@ -29729,58 +29733,54 @@ function htmlTagCompletions() {
 
 // src/client/editor/code-mirror-6.js
 var editable2 = !!document.body.dataset.projectMember;
-function getInitialState(fileEntry, filename, data3) {
-  const entry = fileEntry.state;
-  const doc2 = data3.toString();
-  const extensions = [basicSetup, EditorView.lineWrapping];
+function getInitialState(editorEntry, doc2) {
+  const { fileEntry } = editorEntry;
+  const { path: path2 } = fileEntry;
+  const fileExtension = path2.substring(path2.lastIndexOf(`.`) + 1);
+  const extensions2 = [basicSetup, EditorView.lineWrapping];
   const readOnly2 = EditorState.readOnly;
   const readOnlyCompartment = new Compartment();
-  extensions.push(readOnlyCompartment.of(readOnly2.of(!editable2)));
-  entry.setEditable = (b) => {
+  extensions2.push(readOnlyCompartment.of(readOnly2.of(!editable2)));
+  editorEntry.setEditable = (b) => {
     const newValue = readOnly2.of(!b);
     const update = readOnlyCompartment.reconfigure(newValue);
-    entry.view.dispatch({ effects: update });
+    editorEntry.view.dispatch({ effects: update });
   };
-  const ext = filename.substring(filename.lastIndexOf(`.`) + 1);
   const syntax = {
     css,
     html,
     js: javascript,
     md: markdown
-  }[ext];
-  if (syntax) extensions.push(syntax());
-  extensions.push(
+  }[fileExtension];
+  if (syntax) extensions2.push(syntax());
+  extensions2.push(
     EditorView.updateListener.of((e2) => {
-      const tab = e2.view.tabElement;
-      if (tab && e2.docChanged) {
-        const entry2 = fileEntry.state;
-        const reset = entry2.contentReset;
-        if (entry2.debounce || reset) {
-          clearTimeout(entry2.debounce);
-        }
-        if (!reset) {
-          entry2.debounce = setTimeout(entry2.sync, 1e3);
-        }
-        entry2.contentReset = false;
+      if (e2.view !== editorEntry.view) return;
+      if (!e2.docChanged) return;
+      const reset = editorEntry.contentReset;
+      if (editorEntry.debounce || reset) {
+        clearTimeout(editorEntry.debounce);
       }
+      if (!reset) {
+        editorEntry.debounce = setTimeout(() => editorEntry.sync(), 1e3);
+      }
+      editorEntry.contentReset = false;
     })
   );
-  return EditorState.create({ doc: doc2, extensions });
+  return EditorState.create({ doc: doc2, extensions: extensions2 });
 }
-function setupView(parent, state) {
+function setupView(editorEntry, data3) {
   const view = new EditorView({
-    parent,
-    state,
+    parent: editorEntry.editor,
+    state: getInitialState(editorEntry, data3),
     lineWrapping: true
   });
-  document.addEventListener(`layout:resize`, () => {
-    view.requestMeasure();
-  });
+  document.addEventListener(`layout:resize`, () => view.requestMeasure());
   return view;
 }
 
 // src/client/files/sync.js
-import { createPatch, applyPatch as applyPatch2 } from "/vendor/diff.js";
+import { createPatch, applyPatch as applyPatch3 } from "/vendor/diff.js";
 
 // public/vendor/diff.js
 function Diff() {
@@ -30318,7 +30318,7 @@ function distanceIterator(start, minLine, maxLine) {
     }
   };
 }
-function applyPatch(source, uniDiff) {
+function applyPatch2(source, uniDiff) {
   var options = arguments.length > 2 && arguments[2] !== void 0 ? arguments[2] : {};
   if (typeof uniDiff === "string") {
     uniDiff = parsePatch(uniDiff);
@@ -30419,22 +30419,24 @@ var Rewinder = class _Rewinder {
   pos = 0;
   points = [];
   constructor(basePath, fileEntry) {
+    const { editorEntry } = fileEntry.state;
     _Rewinder.rewinders.push(this);
     Object.assign(this, {
       basePath,
       fileEntry,
-      content: fileEntry.state.content
+      content: editorEntry.content
     });
   }
   hide() {
+    const { fileEntry, ui } = this;
     this.open = false;
-    this.ui.classList.toggle(`hidden`, true);
-    this.fileEntry.state.setEditable(true);
+    ui.classList.toggle(`hidden`, true);
+    fileEntry.state.editorEntry.setEditable(true);
   }
   show() {
     const { fileEntry, points, ui } = this;
     _Rewinder.rewinders.forEach((r) => r.hide());
-    fileEntry.state.setEditable(false);
+    fileEntry.state.editorEntry.setEditable(false);
     ui.classList.toggle(`hidden`, false);
     points[this.pos]?.click();
     this.open = true;
@@ -30516,10 +30518,9 @@ var Rewinder = class _Rewinder {
    */
   setupKeyListeners(ui, points) {
     const { fileEntry } = this;
-    const { tab } = fileEntry.state;
     const handleKeyInput = ({ key }) => {
       const { pos } = this;
-      if (!tab.classList.contains(`active`)) {
+      if (!fileEntry.classList.contains(`selected`)) {
         return;
       }
       if (key === `ArrowLeft`) {
@@ -30539,6 +30540,7 @@ var Rewinder = class _Rewinder {
   }
   back() {
     const { fileEntry, history: history3, pos } = this;
+    const { editorEntry } = fileEntry.state;
     if (pos === history3.length - 1) return;
     const { hash: hash2, reverse } = history3[pos];
     let newContent;
@@ -30550,12 +30552,12 @@ var Rewinder = class _Rewinder {
       let { content: content2 } = this;
       if (!content2) content2 = `
 `;
-      newContent = applyPatch(content2, reverse);
+      newContent = applyPatch2(content2, reverse);
       if (newContent === false) {
         throw new Error(`could not apply patch`);
       }
     }
-    updateViewMaintainScroll(fileEntry.state, newContent, false);
+    updateViewMaintainScroll2(editorEntry, newContent, false);
     this.content = newContent;
     this.pos = this.pos + 1;
     fileEntry.classList.add(`revision`);
@@ -30575,12 +30577,12 @@ var Rewinder = class _Rewinder {
     } else if (forward.delete) {
       newContent = ``;
     } else {
-      newContent = applyPatch(content2, forward);
+      newContent = applyPatch2(content2, forward);
       if (newContent === false) {
         throw new Error(`could not apply patch`);
       }
     }
-    updateViewMaintainScroll(fileEntry.state, newContent, false);
+    updateViewMaintainScroll2(fileEntry.state.editorEntry, newContent, false);
     this.content = newContent;
     if (this.pos === 0) {
       fileEntry.classList.remove(`revision`);
@@ -30599,47 +30601,33 @@ var Rewinder = class _Rewinder {
 
 // src/client/files/sync.js
 var { useWebsockets } = document.body.dataset;
-function createUpdateListener(entry) {
-  return async (evt) => {
-    const { type, update, ours } = evt.detail;
-    if (type === `diff`) {
-      if (!ours) {
-        const oldContent = entry.content;
-        const newContent = applyPatch2(oldContent, update);
-        entry.content = newContent;
-        updateViewMaintainScroll(entry);
-      }
-      updatePreview();
-    }
-  };
-}
 async function syncContent(projectSlug5, fileEntry, forced = false) {
   if (Rewinder.active && !forced) return;
   const { path: path2 } = fileEntry;
-  const entry = fileEntry.state;
-  if (entry.noSync) return;
-  const currentContent = entry.content;
-  const newContent = entry.view.state.doc.toString();
+  const { editorEntry } = fileEntry.state;
+  if (!editorEntry.editable) return;
+  const { content: currentContent, view } = editorEntry;
+  const newContent = view.state.doc.toString();
   if (newContent === currentContent) return;
   const patch = createPatch(path2, currentContent, newContent);
   if (useWebsockets) {
-    entry.content = newContent;
+    editorEntry.setContent(newContent);
     fileEntry.updateContent(`diff`, patch);
   } else {
     const response = await API.files.sync(projectSlug5, path2, patch);
     const responseHash = parseFloat(await response.text());
     if (responseHash === getFileSum(newContent)) {
-      entry.content = newContent;
+      editorEntry.setContent(newContent);
       updatePreview();
     } else {
       if (document.body.dataset.projectMember) {
-        entry.content = await fetchFileContents(projectSlug5, path2);
+        editorEntry.setContent(await fetchFileContents(projectSlug5, path2));
       }
-      entry.contentReset = true;
-      updateViewMaintainScroll(entry);
+      editorEntry.contentReset = true;
+      updateViewMaintainScroll2(editorEntry);
     }
   }
-  entry.debounce = false;
+  editorEntry.debounce = false;
 }
 
 // node_modules/custom-file-tree/src/utils/utils.js
@@ -30663,6 +30651,9 @@ var FileTreeElement = class extends HTMLElement {
   eventControllers = [];
   constructor() {
     super();
+    this.addUIElements();
+  }
+  addUIElements() {
     this.icon = this.find(`& > .icon`);
     if (!this.icon) {
       const icon = this.icon = create2(`span`);
@@ -30674,11 +30665,13 @@ var FileTreeElement = class extends HTMLElement {
       const heading2 = this.heading = create2(`entry-heading`);
       this.appendChild(heading2);
     }
-    this.buttons = this.find(`& > span.buttons`);
-    if (!this.buttons) {
-      const buttons = this.buttons = create2(`span`);
-      buttons.classList.add(`buttons`);
-      this.appendChild(buttons);
+    if (!this.readonly) {
+      this.buttons = this.find(`& > span.buttons`);
+      if (!this.buttons) {
+        const buttons = this.buttons = create2(`span`);
+        buttons.classList.add(`buttons`);
+        this.appendChild(buttons);
+      }
     }
   }
   addExternalListener(target, eventName, handler, options = {}) {
@@ -30714,9 +30707,17 @@ var FileTreeElement = class extends HTMLElement {
   set path(path2) {
     if (!path2) return;
     const pos = path2.endsWith(`/`) ? -2 : -1;
-    this.name = path2.split(`/`).at(pos).replace(/#.*/, ``);
+    const terms = path2.split(`/`);
+    const name2 = this.name = terms.at(pos).replace(/#.*/, ``);
     if (!this.name && path2) {
       throw Error(`why? path is ${path2}`);
+    }
+    if (this.isFile) {
+      const dot2 = name2.indexOf(`.`);
+      if (dot2 >= 0 && dot2 < name2.length - 1) {
+        this.extension = name2.substring(dot2 + 1);
+        this.setAttribute(`extension`, this.extension);
+      }
     }
     const heading2 = this.find(`& > entry-heading`);
     heading2.textContent = this.name;
@@ -30803,8 +30804,8 @@ var WebSocketInterface = class {
    * Set up a websocket connection to a secure
    * endpoint for a given file tree element.
    */
-  constructor(fileTree3, url, basePath = `.`, keepAliveInterval = 6e4) {
-    Object.assign(this, { fileTree: fileTree3, url, basePath, keepAliveInterval });
+  constructor(fileTree4, url, basePath = `.`, keepAliveInterval = 6e4) {
+    Object.assign(this, { fileTree: fileTree4, url, basePath, keepAliveInterval });
     this.connect();
   }
   /**
@@ -30994,11 +30995,11 @@ var WebSocketInterface = class {
    * }
    */
   async oncreate({ path: path2, isFile, from }) {
-    const { id: id2, fileTree: fileTree3 } = this;
+    const { id: id2, fileTree: fileTree4 } = this;
     if (from === id2) return;
-    const entry = fileTree3.__create(path2, isFile);
-    fileTree3.dispatchEvent(
-      new CustomEvent(`ot:created`, { detail: { entry, path: path2, isFile } })
+    const entry2 = fileTree4.__create(path2, isFile);
+    fileTree4.dispatchEvent(
+      new CustomEvent(`ot:created`, { detail: { entry: entry2, path: path2, isFile } })
     );
   }
   /**
@@ -31018,10 +31019,10 @@ var WebSocketInterface = class {
    * }
    */
   async ondelete({ path: path2, from }) {
-    const { id: id2, fileTree: fileTree3 } = this;
+    const { id: id2, fileTree: fileTree4 } = this;
     if (from === id2) return;
-    const entries = fileTree3.__delete(path2);
-    fileTree3.dispatchEvent(
+    const entries = fileTree4.__delete(path2);
+    fileTree4.dispatchEvent(
       new CustomEvent(`ot:deleted`, { detail: { entries, path: path2 } })
     );
   }
@@ -31042,12 +31043,12 @@ var WebSocketInterface = class {
    * }
    */
   async onmove({ isFile, oldPath, newPath, from }) {
-    const { id: id2, fileTree: fileTree3 } = this;
+    const { id: id2, fileTree: fileTree4 } = this;
     if (from === id2) return;
-    const entry = fileTree3.__move(isFile, oldPath, newPath);
-    fileTree3.dispatchEvent(
+    const entry2 = fileTree4.__move(isFile, oldPath, newPath);
+    fileTree4.dispatchEvent(
       new CustomEvent(`ot:moved`, {
-        detail: { entry, isFile, oldPath, newPath }
+        detail: { entry: entry2, isFile, oldPath, newPath }
       })
     );
   }
@@ -31078,8 +31079,8 @@ var WebSocketInterface = class {
    * }
    */
   async onupdate({ path: path2, type, update, from }) {
-    const { id: id2, fileTree: fileTree3 } = this;
-    fileTree3.__update(path2, type, update, from === id2);
+    const { id: id2, fileTree: fileTree4 } = this;
+    fileTree4.__update(path2, type, update, from === id2);
   }
 };
 
@@ -31149,23 +31150,23 @@ async function processUpload(root, items, dirPath = ``) {
       const updatedPath = path2 + item.name + "/";
       root.createEntry(updatedPath, false, false, bulkUpload);
       item.createReader().readEntries(async (entries) => {
-        for (let entry of entries) await iterate(entry, updatedPath);
+        for (let entry2 of entries) await iterate(entry2, updatedPath);
       });
     }
   }
   for (let item of items) {
     try {
-      let entry;
-      if (!entry && item instanceof File) {
-        entry = item;
+      let entry2;
+      if (!entry2 && item instanceof File) {
+        entry2 = item;
       }
-      if (!entry && item.webkitGetAsEntry) {
-        entry = item.webkitGetAsEntry() ?? entry;
+      if (!entry2 && item.webkitGetAsEntry) {
+        entry2 = item.webkitGetAsEntry() ?? entry2;
       }
-      if (!entry && item.getAsFile) {
-        entry = item.getAsFile();
+      if (!entry2 && item.getAsFile) {
+        entry2 = item.getAsFile();
       }
-      await iterate(entry);
+      await iterate(entry2);
     } catch (e2) {
       return alert(localeStrings.INVALID_UPLOAD_TYPE(item.kind));
     }
@@ -31174,21 +31175,24 @@ async function processUpload(root, items, dirPath = ``) {
 
 // node_modules/custom-file-tree/src/utils/make-drop-zone.js
 function makeDropZone(dirEntry) {
+  const { readonly } = dirEntry.root;
   const abortController = new AbortController();
-  dirEntry.draggable = true;
   const unmark = () => {
     dirEntry.findAllInTree(`.drop-target`).forEach((d) => d.classList.remove(`drop-target`));
   };
+  dirEntry.draggable = true;
   dirEntry.addEventListener(
     `dragstart`,
     (evt) => {
       evt.stopPropagation();
+      if (dirEntry.root.readonly) return;
       dirEntry.classList.add(`dragging`);
       dirEntry.dataset.id = `${Date.now()}-${Math.random()}`;
       evt.dataTransfer.setData("id", dirEntry.dataset.id);
     },
     { signal: abortController.signal }
   );
+  if (readonly) return;
   dirEntry.addEventListener(
     `dragenter`,
     (evt) => {
@@ -31235,28 +31239,27 @@ function makeDropZone(dirEntry) {
   }
   return abortController;
 }
-function inThisDir(dir, entry) {
-  if (entry === dir) return true;
-  return entry.closest(`dir-entry`) === dir;
+function inThisDir(dir, entry2) {
+  if (entry2 === dir) return true;
+  return entry2.closest(`dir-entry`) === dir;
 }
 function processDragMove(dirEntry, entryId) {
-  const entry = dirEntry.findInTree(`[data-id="${entryId}"]`);
-  delete entry.dataset.id;
-  entry.classList.remove(`dragging`);
-  if (entry === dirEntry) return;
-  const oldPath = entry.path;
+  const entry2 = dirEntry.findInTree(`[data-id="${entryId}"]`);
+  delete entry2.dataset.id;
+  entry2.classList.remove(`dragging`);
+  if (entry2 === dirEntry) return;
   let dirPath = dirEntry.path;
-  let newPath = (dirPath !== `.` ? dirPath : ``) + entry.name;
-  if (entry.isDir) newPath += `/`;
-  dirEntry.root.moveEntry(entry, oldPath, newPath);
+  let newPath = (dirPath !== `.` ? dirPath : ``) + entry2.name;
+  if (entry2.isDir) newPath += `/`;
+  dirEntry.root.moveEntry(entry2, newPath);
 }
 
 // node_modules/custom-file-tree/src/classes/dir-entry.js
 var DirEntry = class extends FileTreeElement {
   isDir = true;
-  constructor(rootDir = false) {
+  constructor(root, rootDir = false) {
     super();
-    this.addButtons(rootDir);
+    if (!root.readonly) this.addButtons(rootDir);
   }
   get path() {
     return super.path;
@@ -31411,8 +31414,8 @@ var DirEntry = class extends FileTreeElement {
    * never need to do any recursion: if there's an addEntry, that entry
    * goes here.
    */
-  addEntry(entry) {
-    this.appendChild(entry);
+  addEntry(entry2) {
+    this.appendChild(entry2);
     this.sort();
   }
   /**
@@ -31475,11 +31478,14 @@ registry.define(`dir-entry`, DirEntry);
 // node_modules/custom-file-tree/src/classes/file-entry.js
 var FileEntry = class extends FileTreeElement {
   isFile = true;
-  constructor(fileName, fullPath) {
+  constructor(root, fileName, fullPath) {
     super(fileName, fullPath);
+    if (!root.readonly) this.addButtons();
+    this.addEventHandling(root.readonly);
+  }
+  addButtons() {
     this.addRenameButton();
     this.addDeleteButton();
-    this.addEventHandling();
   }
   addRenameButton() {
     if (this.hasButton(`rename-file`)) return;
@@ -31518,7 +31524,7 @@ var FileEntry = class extends FileTreeElement {
       }
     });
   }
-  addEventHandling() {
+  addEventHandling(readonly) {
     this.addEventListener(`click`, (evt) => {
       evt.preventDefault();
       evt.stopPropagation();
@@ -31527,6 +31533,7 @@ var FileEntry = class extends FileTreeElement {
     this.draggable = true;
     this.addEventListener(`dragstart`, (evt) => {
       evt.stopPropagation();
+      if (readonly) return;
       this.classList.add(`dragging`);
       this.dataset.id = `${Date.now()}-${Math.random()}`;
       evt.dataTransfer.setData("id", this.dataset.id);
@@ -31574,15 +31581,18 @@ var FileTree = class extends FileTreeElement {
   get parentDir() {
     return this.rootDir;
   }
+  get readonly() {
+    return this.hasAttribute(`readonly`);
+  }
   get removeEmptyDir() {
-    return !!this.getAttribute(`remove-empty-dir`);
+    return this.hasAttribute(`remove-empty-dir`);
   }
   clear() {
     this.ready = false;
     this.emit(`tree:clear`);
     Object.keys(this.entries).forEach((key) => delete this.entries[key]);
     if (this.rootDir) this.removeChild(this.rootDir);
-    const rootDir = this.rootDir = new DirEntry(true);
+    const rootDir = this.rootDir = new DirEntry(this, true);
     rootDir.path = `.`;
     this.appendChild(rootDir);
   }
@@ -31664,26 +31674,24 @@ var FileTree = class extends FileTreeElement {
     return this.OT?.update(path2, type, update);
   }
   // A rename is a relocation where only the last part of the path changed.
-  renameEntry(entry, newName) {
-    const isFile = !!entry.isFile;
-    const oldPath = entry.path;
-    const pos = oldPath.lastIndexOf(entry.name);
+  renameEntry(entry2, newName) {
+    const oldPath = entry2.path;
+    const pos = oldPath.lastIndexOf(entry2.name);
     let newPath = oldPath.substring(0, pos) + newName;
-    if (entry.isDir) newPath += `/`;
-    const eventType = (entry.isFile ? `file` : `dir`) + `:rename`;
-    this.#relocateEntry(isFile, oldPath, newPath, eventType);
+    if (entry2.isDir) newPath += `/`;
+    const eventType = (entry2.isFile ? `file` : `dir`) + `:rename`;
+    this.#relocateEntry(entry2, oldPath, newPath, eventType);
   }
   // A move is a relocation where everything *but* the last part of the path may have changed.
-  moveEntry(entry, oldPath, newPath) {
-    const isFile = !!entry.isFile;
-    const eventType = (entry.isFile ? `file` : `dir`) + `:move`;
-    this.#relocateEntry(isFile, oldPath, newPath, eventType);
+  moveEntry(entry2, newPath) {
+    const eventType = (entry2.isFile ? `file` : `dir`) + `:move`;
+    this.#relocateEntry(entry2, entry2.path, newPath, eventType);
   }
   // Deletes are a DOM removal of the entry itself, and a pruning
   // of the path -> entry map for any entry that started with the
   // same path, so we don't end up with any orphans.
-  removeEntry(entry) {
-    const { path: path2, isFile, parentDir } = entry;
+  removeEntry(entry2) {
+    const { path: path2, isFile, parentDir } = entry2;
     const eventType = (isFile ? `file` : `dir`) + `:delete`;
     const detail = { path: path2, emptyDir: this.removeEmptyDir };
     this.emit(eventType, detail, () => {
@@ -31713,10 +31721,10 @@ var FileTree = class extends FileTreeElement {
     }
     const detail = { path: path2, content: content2, bulk };
     const grant = (processedContent = content2) => {
-      const entry = this.__create(path2, isFile);
+      const entry2 = this.__create(path2, isFile);
       if (!bypassOT) this.OT?.create(path2, isFile, processedContent);
-      detail.entry = entry;
-      return entry;
+      detail.entry = entry2;
+      return entry2;
     };
     if (immediate) return grant();
     this.emit(eventType, detail, grant);
@@ -31733,7 +31741,7 @@ var FileTree = class extends FileTreeElement {
       const subDirPath = (dir.path === `.` ? `` : dir.path) + fragment + `/`;
       let subDir = this.find(`[path="${subDirPath}"`);
       if (!subDir) {
-        subDir = new DirEntry();
+        subDir = new DirEntry(this);
         subDir.path = subDirPath;
         dir.addEntry(subDir);
         entries[subDirPath] = subDir;
@@ -31743,7 +31751,7 @@ var FileTree = class extends FileTreeElement {
     return dir;
   }
   // private function for initiating <file-entry> or <dir-entry> path changes
-  #relocateEntry(isFile, oldPath, newPath, eventType) {
+  #relocateEntry(entry2, oldPath, newPath, eventType) {
     const { entries } = this;
     if (oldPath === newPath) return;
     if (newPath.startsWith(oldPath)) {
@@ -31765,10 +31773,10 @@ var FileTree = class extends FileTreeElement {
     }
     const detail = { oldPath, newPath };
     this.emit(eventType, detail, () => {
-      const entry = this.__move(isFile, oldPath, newPath);
-      this.OT?.move(isFile, oldPath, newPath);
-      detail.entry = entry;
-      return entry;
+      this.__move(entry2.isFile, oldPath, newPath);
+      this.OT?.move(entry2.isFile, oldPath, newPath);
+      detail.entry = entry2;
+      return entry2;
     });
   }
   // ================================================================================================
@@ -31776,29 +31784,29 @@ var FileTree = class extends FileTreeElement {
   __create(path2, isFile) {
     const { entries } = this;
     const EntryType = isFile ? FileEntry : DirEntry;
-    const entry = entries[path2] = new EntryType();
-    entry.path = path2;
-    this.#mkdir(entry).addEntry(entry);
-    return entry;
+    const entry2 = entries[path2] = new EntryType(this);
+    entry2.path = path2;
+    this.#mkdir(entry2).addEntry(entry2);
+    return entry2;
   }
   // move notification via websocket or immediate code path:
   __move(isFile, oldPath, newPath, when) {
     const { entries } = this;
-    const entry = entries[oldPath];
+    const entry2 = entries[oldPath];
     Object.keys(entries).forEach((key) => {
       if (key.startsWith(oldPath)) {
-        const entry2 = entries[key];
-        const updated = entry2.updatePath(isFile, oldPath, newPath);
+        const entry3 = entries[key];
+        const updated = entry3.updatePath(isFile, oldPath, newPath);
         if (updated) {
-          entries[entry2.path] = entry2;
+          entries[entry3.path] = entry3;
           delete entries[key];
         }
       }
     });
-    const { dirPath } = entries[newPath] = entry;
+    const { dirPath } = entries[newPath] = entry2;
     let dir = dirPath ? entries[dirPath] : this.rootDir;
-    dir.addEntry(entry);
-    return entry;
+    dir.addEntry(entry2);
+    return entry2;
   }
   // update notification via websocket or immediate code path:
   __update(path2, type, update, ours) {
@@ -31809,16 +31817,16 @@ var FileTree = class extends FileTreeElement {
   // delete notification via websocket or immediate code path:
   __delete(path2, isFile, when) {
     const { entries } = this;
-    const entry = entries[path2];
-    const removed = [entry];
+    const entry2 = entries[path2];
+    const removed = [entry2];
     if (isFile) {
-      entry.remove();
+      entry2.remove();
       delete entries[path2];
     } else {
-      Object.entries(entries).forEach(([key, entry2]) => {
+      Object.entries(entries).forEach(([key, entry3]) => {
         if (key.startsWith(path2)) {
-          removed.push(entry2);
-          entry2.remove();
+          removed.push(entry3);
+          entry3.remove();
           delete entries[key];
         }
       });
@@ -31828,9 +31836,9 @@ var FileTree = class extends FileTreeElement {
   // ================================================================================================
   // Select an entry by its path
   select(path2) {
-    const entry = this.entries[path2];
-    if (!entry) throw new Error(localeStrings.PATH_DOES_NOT_EXIST(path2));
-    entry.select();
+    const entry2 = this.entries[path2];
+    if (!entry2) throw new Error(localeStrings.PATH_DOES_NOT_EXIST(path2));
+    entry2.select();
   }
   // Counterpart to select()
   unselect() {
@@ -31838,21 +31846,22 @@ var FileTree = class extends FileTreeElement {
   }
   // Entry selection depends on the element, so we hand that
   // off to the entry itself once granted. (if granted)
-  selectEntry(entry, detail = {}) {
-    const eventType = (entry.isFile ? `file` : `dir`) + `:click`;
-    detail.path = entry.path;
+  selectEntry(entry2, detail = {}) {
+    const eventType = (entry2.isFile ? `file` : `dir`) + `:click`;
+    detail.path = entry2.path;
     this.emit(eventType, detail, () => {
-      entry.select();
-      detail.entry = entry;
-      return entry;
+      entry2.select();
+      detail.entry = entry2;
+      return entry2;
     });
   }
-  toggleDirectory(entry, detail = {}) {
+  toggleDirectory(entry2, detail = {}) {
+    if (entry2.isFile) return;
     const eventType = `dir:toggle`;
-    detail.path = entry.path;
+    detail.path = entry2.path;
     this.emit(eventType, detail, () => {
-      detail.entry = entry;
-      entry.toggle();
+      detail.entry = entry2;
+      entry2.toggle();
     });
   }
   sort() {
@@ -31911,47 +31920,199 @@ var CustomWebsocketInterface = class extends WebSocketInterface {
   }
 };
 
-// src/client/editor/editor-components.js
-var { projectId, projectSlug: projectSlug2, useWebsockets: useWebsockets2 } = document.body.dataset;
+// src/client/editor/editor-entry.js
+var { projectSlug: projectSlug2, useWebsockets: useWebsockets2 } = document.body.dataset;
 var fileTree = document.querySelector(`file-tree`);
-var tabs2 = document.getElementById(`tabs`);
+var tabs = document.getElementById(`tabs`);
 var editors = document.getElementById(`editors`);
-var settingsIcon = document.querySelector(`.project-settings`);
-settingsIcon?.addEventListener(`click`, () => {
-  showEditDialog(projectId);
-});
-function setupEditorPanel(filename) {
-  const panel = create(`div`);
-  panel.id = filename;
-  panel.classList.add(`editor`, `tab`);
-  return panel;
+var movingTab;
+var emptyImage = new Image();
+emptyImage.src = `data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=`;
+function getOrCreateFileEditTab(fileEntry) {
+  return EditorEntry.getOrCreateFileEditTab(fileEntry);
 }
-function setupEditorTab(filename) {
-  const tab = create(`div`);
-  tab.title = filename;
-  tab.textContent = filename.includes(`/`) ? filename.substring(filename.lastIndexOf(`/`) + 1) : filename;
-  document.querySelectorAll(`.active`).forEach((e2) => e2.classList.remove(`active`));
-  tab.classList.add(`tab`, `active`);
-  const close = create(`button`);
-  close.textContent = `x`;
-  close.classList.add(`close`);
-  tab.appendChild(close);
-  return { tab, close };
-}
-function addEditorEventHandling(fileEntry, panel, tab, close, view) {
-  tab.addEventListener(`click`, async () => {
-    if (!fileEntry.state) return;
-    if (!fileEntry.state.tab) return;
-    if (!fileEntry.parentNode) return;
-    if (!fileEntry.select) return;
+var EditorEntry = class _EditorEntry {
+  // Static properties and methods
+  static entries = [];
+  static addEntry(entry2) {
+    this.entries.push(entry2);
+  }
+  static removeEntry(entry2) {
+    const pos = this.entries.indexOf(entry2);
+    this.entries.splice(pos, 1);
+  }
+  static getEntries() {
+    return this.entries;
+  }
+  static getNext(reference) {
+    const { entries } = this;
+    const pos = entries.indexOf(reference);
+    if (pos === entries.length - 1) return entries.at(pos - 1);
+    return entries.at(pos + 1);
+  }
+  static getOrCreateFileEditTab(fileEntry) {
+    const entry2 = this.entries.find((e2) => e2.fileEntry === fileEntry);
+    if (entry2) return entry2.select();
+    return new _EditorEntry(fileEntry);
+  }
+  static sortFromTabs() {
+    const { entries } = this;
+    const ordering = [...tabs.querySelectorAll(`.editor.tab`)];
+    entries.sort((a, b) => {
+      a = ordering.indexOf(a.tab);
+      b = ordering.indexOf(b.tab);
+      return a === b ? 0 : a < b ? -1 : 1;
+    });
+  }
+  // Instance properties and methods
+  editable = false;
+  contentReset = false;
+  debounce = false;
+  setEditable = () => {
+  };
+  // Relies on the function binding performed in getInitialState()
+  constructor(fileEntry) {
+    this.fileEntry = fileEntry;
+    _EditorEntry.entries.push(this);
+    fileEntry.setState({ editorEntry: this });
+    this.select();
+  }
+  async select() {
+    if (!this.editor) await this.load();
+    this.focus();
+    return this;
+  }
+  async getFileData(path2, mimetype) {
+    const { fileEntry } = this;
+    0;
+    let data3;
+    if (fileEntry.root.OT) {
+      ({ data: data3 } = await fileEntry.load());
+    } else {
+      try {
+        data3 = await fetchFileContents(projectSlug2, path2, mimetype);
+        if (data3 instanceof Error) data3 = void 0;
+      } catch (e2) {
+      }
+    }
+    return data3 || new ErrorNotice(`Could not load ${path2}`);
+  }
+  async load() {
+    const { fileEntry } = this;
+    const { path: path2 } = this.fileEntry;
+    const filename = path2.split(`/`).at(-1);
+    const viewType = getViewType(filename);
+    const { text, unknown, media, type } = viewType;
+    const data3 = await this.getFileData(path2, type);
+    if (data3 instanceof Notice) return data3;
+    const verified = verifyViewType(viewType.type, data3);
+    if (!verified) {
+      return new ErrorNotice(
+        `Content for ${path2} does not match the file extension!`
+      );
+    }
+    this.editable = viewType.editable;
+    this.createEditorPanel();
+    if (text || unknown) {
+      this.setTextContent(data3);
+    } else if (media) {
+      const key = `${projectSlug2}/${path2}`;
+      this.setMediaContent(type, key);
+    }
+    this.createTab(path2, filename);
+    fileEntry.addEventListener(`content:update`, (evt) => this.update(evt));
+  }
+  createEditorPanel() {
+    const editor = this.editor = create(`div`, { class: `editor panel` });
+    editors.appendChild(editor);
+  }
+  createTab(path2, filename) {
+    const tab = this.tab = create(
+      `div`,
+      {
+        class: `editor tab`,
+        draggable: true,
+        title: path2,
+        textContent: filename
+      },
+      {
+        click: () => this.focus()
+      }
+    );
+    tab.addEventListener(`click`, async () => this.focus());
+    tab.addEventListener(`dragstart`, (evt) => {
+      movingTab = tab;
+      tab.classList.add(`moving`);
+      const { dataTransfer } = evt;
+      dataTransfer.setData(`text/plain`, ``);
+      dataTransfer.setDragImage(emptyImage, 0, 0);
+      dataTransfer.effectAllowed = `move`;
+    });
+    tab.addEventListener(`dragover`, (evt) => {
+      const { target } = evt;
+      const source = movingTab;
+      if (source === target) return;
+      if (!source.classList.contains(`tab`)) return;
+      evt.preventDefault();
+      if (target === source.previousSibling) {
+        tabs.insertBefore(source, target);
+      } else {
+        tabs.insertBefore(source, target.nextSibling);
+      }
+    });
+    tab.addEventListener(`dragend`, (evt) => {
+      movingTab.classList.remove(`moving`);
+      movingTab = void 0;
+      _EditorEntry.sortFromTabs();
+    });
+    tabs.appendChild(tab);
+    const close = this.close = create(
+      `button`,
+      {
+        textContent: `x`,
+        class: `close`
+      },
+      {
+        click: () => this.unload()
+      }
+    );
+    close.addEventListener(`pointerdown`, () => this.unload());
+    close.addEventListener(`click`, () => this.unload());
+    tab.appendChild(close);
+  }
+  setTextContent(data3) {
+    if (data3.map) {
+      data3 = new TextDecoder().decode(Uint8Array.from(data3));
+    }
+    this.setContent(data3);
+    this.view = setupView(this, data3);
+  }
+  setContent(content2) {
+    this.content = content2;
+  }
+  setMediaContent(type, key) {
+    let view;
+    if (type.startsWith(`image`)) {
+      view = create(`img`);
+    } else if (type.startsWith(`audio`)) {
+      view = create(`audio`);
+      view.controls = true;
+    } else if (type.startsWith(`video`)) {
+      view = create(`video`);
+      view.controls = true;
+    }
+    view.src = `/v1/files/content/${key}`;
+    this.editor.appendChild(view);
+  }
+  async focus() {
+    const { fileEntry, editor, tab, view } = this;
     fileEntry.select();
     ensureFileTreeWidth();
-    document.querySelectorAll(`.editor`).forEach((e2) => e2.setAttribute(`hidden`, `hidden`));
-    panel.removeAttribute(`hidden`);
-    document.querySelectorAll(`.active`).forEach((e2) => e2.classList.remove(`active`));
+    _EditorEntry.entries.forEach((e2) => e2.blur());
+    editor.classList.add(`active`);
     tab.classList.add(`active`);
     tab.scrollIntoView();
-    view.focus();
+    view?.focus();
     const currentURL = location.toString().replace(location.search, ``);
     const viewURL = `${currentURL}?view=${fileEntry.path}`;
     history.replaceState(null, null, viewURL);
@@ -31963,111 +32124,48 @@ function addEditorEventHandling(fileEntry, panel, tab, close, view) {
         handleFileHistory(fileEntry, projectSlug2, history3);
       }
     }
-  });
-  const closeTab = () => {
-    if (fileEntry.state.closed) return;
-    let newTab;
+  }
+  blur() {
+    const { tab, editor, view } = this;
+    tab.classList.remove(`active`);
+    editor.classList.remove(`active`);
+  }
+  unload() {
+    const { fileEntry, tab, editor } = this;
+    tabs.removeChild(tab);
+    editors.removeChild(editor);
     if (tab.classList.contains(`active`)) {
-      fileTree.unselect();
-      const tabs3 = Array.from(document.querySelectorAll(`div.tab`));
-      const tabPos = tabs3.findIndex((t2) => t2 === tab);
-      newTab = tabPos === 0 ? tabs3[1] : tabs3[tabPos - 1];
+      _EditorEntry.getNext(this)?.select();
     }
-    fileEntry.state.closed = true;
-    tab.remove();
-    panel.remove();
-    newTab?.click();
-  };
-  close.addEventListener(`pointerdown`, closeTab);
-  close.addEventListener(`click`, closeTab);
-}
-async function getOrCreateFileEditTab(fileEntry, projectSlug5, filename) {
-  let entry = fileEntry.state;
-  if (entry?.tab) {
-    const { closed, tab: tab2, panel: panel2 } = entry;
-    if (closed) {
-      entry.closed = false;
-      tabs2.appendChild(tab2);
-      editors.appendChild(panel2);
+    delete fileEntry.state.editorEntry;
+    _EditorEntry.removeEntry(this);
+  }
+  async update(evt) {
+    const { type, update, ours } = evt.detail;
+    if (type !== `diff`) return;
+    if (!ours) {
+      const oldContent = entry.content;
+      this.setContent(applyPatch(oldContent, update));
+      updateViewMaintainScroll(this);
     }
-    return tab2.click();
-  } else {
-    const { path: path2 } = fileEntry;
-    if (document.querySelector(`[title="${path2}"]`)) {
-      return;
-    }
+    updatePreview();
   }
-  const viewType = getViewType(filename);
-  let data3;
-  if (fileEntry.root.OT) {
-    ({ data: data3 } = await fileEntry.load());
-  } else {
-    try {
-      data3 = await fetchFileContents(projectSlug5, filename, viewType.type);
-    } catch (e2) {
-    }
+  sync() {
+    const { fileEntry, editable: editable3 } = this;
+    if (!editable3) return;
+    syncContent(projectSlug2, fileEntry);
   }
-  if (!data3) {
-    return new ErrorNotice(`Could not load ${filename}`);
+  lock() {
+    if (!this.editable) return;
+    this.editable = false;
+    this.setEditable?.(false);
   }
-  const verified = verifyViewType(viewType.type, data3);
-  if (!verified) {
-    return new ErrorNotice(`Content for ${filename} does not match extension.`);
+  unlock() {
+    if (this.editable) return;
+    this.editable = true;
+    this.setEditable?.(true);
   }
-  const panel = setupEditorPanel(filename);
-  editors.appendChild(panel);
-  const { tab, close } = setupEditorTab(filename);
-  tabs2.appendChild(tab);
-  const key = `${projectSlug5}/${filename}`;
-  let view;
-  if (viewType.text || viewType.unknown) {
-    if (data3.map) {
-      data3 = new TextDecoder().decode(Uint8Array.from(data3));
-    }
-    const initialState = getInitialState(fileEntry, filename, data3);
-    view = setupView(panel, initialState);
-  } else if (viewType.media) {
-    const { type } = viewType;
-    if (type.startsWith(`image`)) {
-      view = create(`img`);
-    } else if (type.startsWith(`audio`)) {
-      view = create(`audio`);
-      view.controls = true;
-    } else if (type.startsWith(`video`)) {
-      view = create(`video`);
-      view.controls = true;
-    }
-    view.src = `/v1/files/content/${key}`;
-    panel.appendChild(view);
-  }
-  view.tabElement = tab;
-  addEditorEventHandling(fileEntry, panel, tab, close, view);
-  const properties2 = {
-    filename,
-    tab,
-    close,
-    panel,
-    view,
-    content: viewType.editable ? view.state.doc.toString() : data3,
-    sync: () => {
-      if (viewType.editable) {
-        syncContent(projectSlug5, fileEntry);
-      }
-    },
-    noSync: !viewType.editable
-  };
-  if (entry) {
-    Object.assign(entry, properties2);
-  } else {
-    fileEntry.setState(properties2);
-    entry = fileEntry.state;
-  }
-  if (!entry.updateListener) {
-    const updateListener2 = createUpdateListener(entry);
-    fileEntry.addEventListener(`content:update`, updateListener2);
-  }
-  tab.click();
-}
+};
 
 // src/client/files/default-files.js
 var DEFAULT_FILES = [
@@ -32080,19 +32178,57 @@ var DEFAULT_FILES = [
 
 // src/client/files/file-tree-utils.js
 import { unzip } from "/vendor/unzipit.module.js";
+
+// src/client/files/inject-file-tree-icons.js
+var fileTree2 = document.querySelector(`file-tree`);
+var extensions = [];
+var style = document.createElement(`style`);
+document.querySelector(`head`).appendChild(style);
+function updateCSS() {
+  const base2 = `file-tree {
+  dir-entry {
+    file-entry {
+      &[extension]:has(.icon) {
+        .icon {
+          background-image: url("/themes/default/images/icons/default.svg");
+          background-size: 100% 100%;
+          &:before {
+            content: " ";
+          }
+        }
+        ${extensions.map(
+    (ext) => `
+        &[extension="${ext}"] .icon {
+          background-image: url("/themes/default/images/icons/classic/${ext}.svg"), url("/themes/default/images/icons/default.svg");
+        }`
+  ).join(``)}
+      }
+    }
+  }
+}`;
+  style.textContent = base2;
+}
+function supportFileExtension(extension) {
+  if (extensions.indexOf(extension) >= 0) return;
+  extensions.push(extension);
+  updateCSS();
+}
+
+// src/client/files/file-tree-utils.js
 var RETRY_INTERVAL = 3e3;
 var MAX_RETRIES = 5;
 var { useWebsockets: useWebsockets3 } = document.body.dataset;
 var { defaultCollapse, defaultFile, projectMember, projectSlug: projectSlug3 } = document.body.dataset;
-var fileTree2 = document.getElementById(`filetree`);
+var fileTree3 = document.getElementById(`filetree`);
 var col1 = document.querySelector(`.left.column`);
-fileTree2.addEventListener(`tree:ready`, async () => {
+fileTree3.addEventListener(`tree:ready`, async () => {
   let fileEntry;
+  fileTree3.findAll(`file-entry`).forEach(({ extension }) => supportFileExtension(extension));
   if (defaultFile) {
-    fileEntry = fileTree2.querySelector(`file-entry[path="${defaultFile}"]`);
+    fileEntry = fileTree3.querySelector(`file-entry[path="${defaultFile}"]`);
   } else {
     for (const d of DEFAULT_FILES) {
-      fileEntry = fileTree2.querySelector(`file-entry[path="${d}"]`);
+      fileEntry = fileTree3.querySelector(`file-entry[path="${d}"]`);
       if (fileEntry) break;
     }
   }
@@ -32100,8 +32236,8 @@ fileTree2.addEventListener(`tree:ready`, async () => {
     const entries = defaultCollapse.split(`
 `).map((v) => v.trim()).filter(Boolean);
     entries.forEach((path2) => {
-      let entry = fileTree2.querySelector(`dir-entry[path="${path2}/"]`);
-      entry?.toggle(true);
+      let entry2 = fileTree3.querySelector(`dir-entry[path="${path2}/"]`);
+      entry2?.toggle(true);
     });
   }
   if (fileEntry) {
@@ -32128,7 +32264,7 @@ async function setupFileTree() {
           RETRY_INTERVAL
         );
       }
-      const OT = await fileTree2.connectViaWebSocket(
+      const OT = await fileTree3.connectViaWebSocket(
         url,
         projectSlug3,
         6e4,
@@ -32162,35 +32298,35 @@ async function setupFileTree() {
       connect();
     }
   } else {
-    fileTree2.setContent(dirData);
+    fileTree3.setContent(dirData);
   }
   addFileTreeHandling();
 }
 function addFileTreeHandling() {
-  addFileClick(fileTree2, projectSlug3);
-  addFileCreate(fileTree2, projectSlug3);
-  addFileMove(fileTree2, projectSlug3);
-  addFileDelete(fileTree2, projectSlug3);
-  addDirClick(fileTree2, projectSlug3);
-  addDirToggle(fileTree2, projectSlug3);
-  addDirCreate(fileTree2, projectSlug3);
-  addDirMove(fileTree2, projectSlug3);
-  addDirDelete(fileTree2, projectSlug3);
+  addFileClick(fileTree3, projectSlug3);
+  addFileCreate(fileTree3, projectSlug3);
+  addFileMove(fileTree3, projectSlug3);
+  addFileDelete(fileTree3, projectSlug3);
+  addDirClick(fileTree3, projectSlug3);
+  addDirToggle(fileTree3, projectSlug3);
+  addDirCreate(fileTree3, projectSlug3);
+  addDirMove(fileTree3, projectSlug3);
+  addDirDelete(fileTree3, projectSlug3);
 }
 function ensureFileTreeWidth() {
-  const wf = fileTree2.scrollWidth;
   const wc = col1.clientWidth;
+  if (wc < 16) return;
+  const wf = fileTree3.scrollWidth;
   const diff2 = wf - wc;
-  if (diff2 > 0) {
-    col1.parentNode.dispatchEvent(
-      new CustomEvent(`update:col1`, {
-        detail: { diff: diff2 + 16 }
-      })
-    );
-  }
+  if (diff2 <= 0) return;
+  col1.parentNode.dispatchEvent(
+    new CustomEvent(`update:col1`, {
+      detail: { diff: diff2 + 16 }
+    })
+  );
 }
-async function addFileClick(fileTree3, projectSlug5) {
-  fileTree3.addEventListener(`file:click`, async (evt) => {
+async function addFileClick(fileTree4, projectSlug5) {
+  fileTree4.addEventListener(`file:click`, async (evt) => {
     const fileEntry = evt.detail.grant();
     getOrCreateFileEditTab(
       fileEntry,
@@ -32199,7 +32335,7 @@ async function addFileClick(fileTree3, projectSlug5) {
     );
     if (Rewinder.active) {
       if (useWebsockets3) {
-        fileTree3.OT?.getFileHistory(fileEntry.path);
+        fileTree4.OT?.getFileHistory(fileEntry.path);
       } else {
         const history3 = await API.files.history(projectSlug5, fileEntry.path);
         handleFileHistory(fileEntry, projectSlug5, history3);
@@ -32208,12 +32344,12 @@ async function addFileClick(fileTree3, projectSlug5) {
     ensureFileTreeWidth();
   });
 }
-async function uploadFile(fileTree3, fileName, content2, grant) {
+async function uploadFile(fileTree4, fileName, content2, grant) {
   const fileSize = content2.byteLength;
   if (fileSize > 1e7) {
     return alert(`File uploads are limited to 10 MB`);
   }
-  if (fileTree3.OT) {
+  if (fileTree4.OT) {
     if (content2 instanceof ArrayBuffer) {
       content2 = Array.from(new Uint8Array(content2));
     }
@@ -32238,9 +32374,9 @@ async function uploadFile(fileTree3, fileName, content2, grant) {
 async function uploadArchive(path2, content2, bulkUploadPaths) {
   const basePath = path2.substring(0, path2.lastIndexOf(`/`) + 1);
   let { entries } = await unzip(new Uint8Array(content2).buffer);
-  entries = Object.entries(entries).map(([path3, entry]) => ({
+  entries = Object.entries(entries).map(([path3, entry2]) => ({
     path: path3,
-    entry
+    entry: entry2
   }));
   const prefix = (function findPrefix() {
     let a = entries[0].path;
@@ -32255,38 +32391,40 @@ async function uploadArchive(path2, content2, bulkUploadPaths) {
     }
   }
   bulkUploadPaths.push(...entries.map((e2) => e2.path));
-  for await (let { path: path3, entry } of entries) {
+  for await (let { path: path3, entry: entry2 } of entries) {
     path3 = basePath + path3;
-    const arrayBuffer = await entry.arrayBuffer();
-    const isFile = !entry.isDirectory;
+    const arrayBuffer = await entry2.arrayBuffer();
+    const isFile = !entry2.isDirectory;
     let content3 = void 0;
     if (isFile && arrayBuffer.byteLength > 0) {
       content3 = new TextDecoder().decode(arrayBuffer);
     }
-    fileTree2.createEntry(path3, isFile, content3);
+    fileTree3.createEntry(path3, isFile, content3);
   }
 }
-async function addFileCreate(fileTree3, projectSlug5) {
+async function addFileCreate(fileTree4, projectSlug5) {
   const bulkUploadPaths = [];
-  fileTree3.addEventListener(`file:create`, async (evt) => {
+  fileTree4.addEventListener(`file:create`, async (evt) => {
     const { path: path2, content: content2, bulk, grant } = evt.detail;
     if (content2) {
       if (path2.endsWith(`.zip`) && confirm(`Unpack zip file?`)) {
         bulkUploadPaths.splice(0, bulkUploadPaths.length);
         uploadArchive(path2, content2, bulkUploadPaths);
       } else {
-        const entry = await uploadFile(fileTree3, path2, content2, grant);
+        const fileEntry = await uploadFile(fileTree4, path2, content2, grant);
         if (!bulk && !bulkUploadPaths.includes(path2)) {
-          getOrCreateFileEditTab(entry, projectSlug5, path2);
+          supportFileExtension(fileEntry.extension);
+          getOrCreateFileEditTab(fileEntry, projectSlug5, path2);
         }
       }
       updatePreview();
     } else {
       const runCreate = () => {
         const fileEntry = grant();
+        supportFileExtension(fileEntry.extension);
         getOrCreateFileEditTab(fileEntry, projectSlug5, path2);
       };
-      if (fileTree3.OT) {
+      if (fileTree4.OT) {
         runCreate();
       } else {
         const response = await API.files.create(projectSlug5, path2);
@@ -32302,17 +32440,17 @@ async function addFileCreate(fileTree3, projectSlug5) {
     }
     ensureFileTreeWidth();
   });
-  fileTree3.addEventListener(`ot:created`, (evt) => {
+  fileTree4.addEventListener(`ot:created`, (evt) => {
   });
 }
 function updateEditorBindings(fileTreeEntry) {
-  const { path: path2, state: entry } = fileTreeEntry;
-  if (!entry) return;
+  const { path: path2, state: entry2 } = fileTreeEntry;
+  if (!entry2) return;
   let key = path2;
   if (key.includes(`/`)) {
     key = key.substring(key.lastIndexOf(`/`) + 1);
   }
-  const { tab, panel } = entry;
+  const { tab, panel } = entry2;
   if (tab) {
     tab.title = path2;
     tab.childNodes.forEach((n) => {
@@ -32324,16 +32462,17 @@ function updateEditorBindings(fileTreeEntry) {
   if (panel) {
     panel.title = panel.id = path2;
   }
-  fileTreeEntry.setState(entry);
+  fileTreeEntry.setState(entry2);
 }
-async function addFileMove(fileTree3, projectSlug5) {
+async function addFileMove(fileTree4, projectSlug5) {
   const renameHandler = async (evt) => {
     const { oldPath, newPath, grant } = evt.detail;
     const runMove = () => {
       const fileEntry = grant();
+      supportFileExtension(fileEntry.extension);
       updateEditorBindings(fileEntry);
     };
-    if (fileTree3.OT) {
+    if (fileTree4.OT) {
       return runMove();
     }
     const response = await API.files.rename(projectSlug5, oldPath, newPath);
@@ -32348,21 +32487,21 @@ async function addFileMove(fileTree3, projectSlug5) {
     updatePreview();
     ensureFileTreeWidth();
   };
-  fileTree3.addEventListener(`file:rename`, renameHandler);
-  fileTree3.addEventListener(`file:move`, renameHandler);
-  fileTree3.addEventListener(`ot:moved`, async (evt) => {
+  fileTree4.addEventListener(`file:rename`, renameHandler);
+  fileTree4.addEventListener(`file:move`, renameHandler);
+  fileTree4.addEventListener(`ot:moved`, async (evt) => {
     updateEditorBindings(evt.detail.entry);
   });
 }
-async function addFileDelete(fileTree3, projectSlug5) {
-  fileTree3.addEventListener(`file:delete`, async (evt) => {
+async function addFileDelete(fileTree4, projectSlug5) {
+  fileTree4.addEventListener(`file:delete`, async (evt) => {
     const { path: path2, grant } = evt.detail;
     const runDelete = () => {
-      const [entry] = grant();
-      const { close } = entry.state ?? {};
-      close?.click();
+      const [entry2] = grant();
+      const { editorEntry } = entry2.state ?? {};
+      editorEntry?.unload();
     };
-    if (fileTree3.OT) {
+    if (fileTree4.OT) {
       return runDelete();
     }
     if (path2) {
@@ -32383,29 +32522,29 @@ async function addFileDelete(fileTree3, projectSlug5) {
     updatePreview();
     ensureFileTreeWidth();
   });
-  fileTree3.addEventListener(`ot:deleted`, async (evt) => {
+  fileTree4.addEventListener(`ot:deleted`, async (evt) => {
     const { entries } = evt.detail;
     const [fileEntry] = entries;
-    const { close } = fileEntry.state ?? {};
-    close?.click();
+    const { editorEntry } = fileEntry.state ?? {};
+    editorEntry?.unload();
   });
 }
-async function addDirClick(fileTree3, projectSlug5) {
-  fileTree3.addEventListener(`dir:click`, async (evt) => {
+async function addDirClick(fileTree4, projectSlug5) {
+  fileTree4.addEventListener(`dir:click`, async (evt) => {
     evt.detail.grant();
     ensureFileTreeWidth();
   });
 }
-async function addDirToggle(fileTree3, projectSlug5) {
-  fileTree3.addEventListener(`dir:toggle`, async (evt) => {
+async function addDirToggle(fileTree4, projectSlug5) {
+  fileTree4.addEventListener(`dir:toggle`, async (evt) => {
     evt.detail.grant();
     ensureFileTreeWidth();
   });
 }
-async function addDirCreate(fileTree3, projectSlug5) {
-  fileTree3.addEventListener(`dir:create`, async (evt) => {
+async function addDirCreate(fileTree4, projectSlug5) {
+  fileTree4.addEventListener(`dir:create`, async (evt) => {
     const { path: path2, grant } = evt.detail;
-    if (fileTree3.OT) {
+    if (fileTree4.OT) {
       grant();
     } else {
       const response = await API.files.create(projectSlug5, path2);
@@ -32421,10 +32560,10 @@ async function addDirCreate(fileTree3, projectSlug5) {
     ensureFileTreeWidth();
   });
 }
-async function addDirMove(fileTree3, projectSlug5) {
+async function addDirMove(fileTree4, projectSlug5) {
   const dirRenameHandler = async (evt) => {
     const { oldPath, newPath, grant } = evt.detail;
-    if (fileTree3.OT) {
+    if (fileTree4.OT) {
       grant();
     } else {
       const response = await API.files.rename(projectSlug5, oldPath, newPath);
@@ -32440,13 +32579,13 @@ async function addDirMove(fileTree3, projectSlug5) {
     updatePreview();
     ensureFileTreeWidth();
   };
-  fileTree3.addEventListener(`dir:rename`, dirRenameHandler);
-  fileTree3.addEventListener(`dir:move`, dirRenameHandler);
+  fileTree4.addEventListener(`dir:rename`, dirRenameHandler);
+  fileTree4.addEventListener(`dir:move`, dirRenameHandler);
 }
-async function addDirDelete(fileTree3, projectSlug5) {
-  fileTree3.addEventListener(`dir:delete`, async (evt) => {
+async function addDirDelete(fileTree4, projectSlug5) {
+  fileTree4.addEventListener(`dir:delete`, async (evt) => {
     const { path: path2, grant } = evt.detail;
-    if (fileTree3.OT) return grant();
+    if (fileTree4.OT) return grant();
     const response = await API.files.delete(projectSlug5, path2);
     if (response instanceof Error) return;
     if (response.status === 200) {
@@ -32463,14 +32602,16 @@ async function addDirDelete(fileTree3, projectSlug5) {
 
 // src/client/editor/event-handling.js
 var mac2 = navigator.userAgent.includes(`Mac OS`);
-var { useWebsockets: useWebsockets4 } = document.body.dataset;
+var { projectId, projectSlug: projectSlug4, useWebsockets: useWebsockets4 } = document.body.dataset;
+var tabs2 = document.getElementById(`tabs`);
 var left = document.getElementById(`left`);
 var right = document.getElementById(`right`);
-function addEventHandling(projectSlug5) {
+function setupUIEventHandling() {
   disableSaveHotkey();
-  enableDownloadButton(projectSlug5);
-  connectPrettierButton(projectSlug5);
-  enableRewindFunctions(projectSlug5);
+  enableSettings();
+  enableDownloadButton();
+  connectPrettierButton();
+  enableRewindFunctions();
   addTabScrollHandling();
   globalThis.addEventListener("beforeunload", () => {
     globalThis.__shutdown = true;
@@ -32487,61 +32628,58 @@ function disableSaveHotkey() {
     }
   });
 }
-function enableDownloadButton(projectSlug5) {
+function enableSettings() {
+  const settingsIcon = document.querySelector(`.project-settings`);
+  if (!settingsIcon) return;
+  settingsIcon?.addEventListener(`click`, () => {
+    globalThis.showEditDialog(projectId);
+  });
+}
+function enableDownloadButton() {
   const download = document.getElementById(`download`);
   if (!download) return;
   download.addEventListener(`click`, async () => {
-    API.projects.download(projectSlug5);
+    API.projects.download(projectSlug4);
   });
 }
-function connectPrettierButton(projectSlug5) {
+function connectPrettierButton() {
   const format = document.getElementById(`format`);
   if (!format) return;
   format.addEventListener(`click`, async () => {
     const tab = document.querySelector(`.active`);
     const fileEntry = document.querySelector(`file-entry.selected`);
-    if (fileEntry.state?.tab !== tab) {
-      throw new Error(`active tab has no associated selected file? O_o`);
-    }
     const fileName = fileEntry.path;
     format.hidden = true;
-    const result = await API.files.format(projectSlug5, fileName);
+    const result = await API.files.format(projectSlug4, fileName);
     if (result instanceof Error) return;
     format.hidden = false;
-    const { view } = fileEntry.state;
-    const content2 = await fetchFileContents(projectSlug5, fileName);
-    fileEntry.setState({ content: content2 });
-    view.dispatch({
-      changes: {
-        from: 0,
-        to: view.state.doc.length,
-        insert: content2
-      }
-    });
+    const { editorEntry } = fileEntry.state;
+    editorEntry.setContent(await fetchFileContents(projectSlug4, fileName));
+    updateViewMaintainScroll2(editorEntry);
   });
 }
-function enableRewindFunctions(projectSlug5) {
+function enableRewindFunctions() {
   const rewindBtn = document.getElementById(`rewind`);
   if (!rewindBtn) return;
   rewindBtn.addEventListener(`click`, async () => {
     rewindBtn.blur();
     const path2 = document.querySelector(`.active.tab`).title;
-    const fileTree3 = document.querySelector(`file-tree`);
+    const fileTree4 = document.querySelector(`file-tree`);
     if (path2) {
       const fileEntry = document.querySelector(`file-entry[path="${path2}"]`);
       if (fileEntry) {
         const { rewind } = fileEntry.state ?? {};
         if (rewind && rewind.open) {
-          fileTree3.classList.remove(`rewinding`);
+          fileTree4.classList.remove(`rewinding`);
           Rewinder.close();
         } else {
           Rewinder.enable();
-          fileTree3.classList.add(`rewinding`);
+          fileTree4.classList.add(`rewinding`);
           if (useWebsockets4) {
-            fileTree3.OT?.getFileHistory(path2);
+            fileTree4.OT?.getFileHistory(path2);
           } else {
-            const history3 = await API.files.history(projectSlug5, path2);
-            handleFileHistory(fileEntry, projectSlug5, history3);
+            const history3 = await API.files.history(projectSlug4, path2);
+            handleFileHistory(fileEntry, projectSlug4, history3);
           }
         }
       }
@@ -32552,7 +32690,7 @@ function addTabScrollHandling() {
   let scrolling = false;
   function scrollTabs(step) {
     if (!scrolling) return;
-    tabs.scrollBy(step, 0);
+    tabs2.scrollBy(step, 0);
     setTimeout(() => scrollTabs(step), 4);
   }
   for (const type of [`mouseup`, `touchend`]) {
@@ -32575,15 +32713,6 @@ function addTabScrollHandling() {
 }
 
 // src/client/entry-point.js
-var { projectId: projectId2, projectSlug: projectSlug4 } = document.body.dataset;
-new class Editor {
-  constructor() {
-    Object.assign(this, { projectId: projectId2, projectSlug: projectSlug4 });
-    this.init();
-  }
-  async init() {
-    await setupFileTree(this);
-    addEventHandling(this.projectSlug);
-    updatePreview();
-  }
-}();
+await setupFileTree();
+setupUIEventHandling();
+updatePreview();

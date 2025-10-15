@@ -14,6 +14,7 @@ import {
   getUserSuspensions,
   hasAccessToUserRecords,
   getStarterProjects,
+  isSuperUser,
 } from "../database/index.js";
 
 import { getServiceDomain, validProviders } from "./auth/settings.js";
@@ -70,6 +71,11 @@ export async function bindUser(req, res = { locals: {} }, next = () => {}) {
 
   const { user } = req.session.passport ?? req.session ?? fallback;
   res.locals.user = user;
+
+  if (user?.admin) {
+    user.superuser = isSuperUser(user);
+  }
+
   next();
   return user;
 }
@@ -198,6 +204,7 @@ export async function bindCommonValues(req, res, next) {
     try {
       res.locals.lookups.project = getProject(slug);
     } catch (e) {
+      // is this a starter?
       console.error(e);
       return next(e);
     }
