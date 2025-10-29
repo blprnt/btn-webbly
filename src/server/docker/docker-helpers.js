@@ -172,15 +172,10 @@ export async function runContainer(project, slug = project.slug) {
   // There is no running container: start one
   if (!foundProject()) {
     console.log(`- Starting container on port ${port}`);
-<<<<<<< HEAD
-    const runFlags = `--rm --stop-timeout 0 --name ${slug}`;
-    //const bindMount = `--mount type=bind,src=.${sep}content${sep}${slug},dst=/app`;
-    const bindMount = `--mount type=bind,src=${process.cwd()}${sep}content${sep}${slug},dst=/app`;
-=======
+
     const runFlags = `--detach --rm --stop-timeout 0 --name ${slug}`;
     const base = isStarter ? STARTER_BASE : CONTENT_BASE;
     const bindMount = `--mount type=bind,src=.${sep}${base}${sep}${slug},dst=/app`;
->>>>>>> upstream/main
     const envVars = Object.entries(getProjectEnvironmentVariables(project))
       .map(([k, v]) => `-e ${k}="${v}"`)
       .join(` `);
