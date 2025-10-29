@@ -6,20 +6,25 @@ import {
   deleteContainerAndImage,
 } from "../server/docker/docker-helpers.js";
 
+console.log(`\nRunning test cleanup...\n`);
+
 // First, clean up orphaned folders
 execSync(`rm -rf ./content/docker-*`);
 
 // And screenshots
 execSync(`rm -rf ./content/__screenshots/docker-*`);
 
+// And test data
+execSync(`rm -rf ./data/*.data.sql`);
+execSync(`rm -rf ./data/*.test.sqlite3`);
+
 // Then clean up any test containers
 getAllRunningContainers()
   .filter((e) => e.image.startsWith(`docker-project-`))
   .forEach((e) => {
-    console.log(e.image);
+    console.log(`getAllRunningContainers - deleting ${e.image}`);
     deleteContainerAndImage({ slug: e.image });
   });
-3;
 
 // And then do an "orphaned images" pass:
 execSync(`docker image list -a --no-trunc --format json`)
@@ -34,3 +39,5 @@ execSync(`docker image list -a --no-trunc --format json`)
       });
     }
   });
+
+console.log(`Test cleanup complete.\n\n`);

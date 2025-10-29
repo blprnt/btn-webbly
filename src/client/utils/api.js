@@ -44,7 +44,10 @@ export const API = {
         method: `post`,
       }),
     get: async (projectSlug, fileName) =>
-      fetch(`files/content/${projectSlug}/${fileName}`),
+      fetch(`files/content/${projectSlug}/${fileName}`).then((r) => {
+        if (r.ok) return r;
+        return new Error(`Fetch response not ok`);
+      }),
     history: async (projectSlug, fileName) =>
       fetch(`files/history/${projectSlug}/${fileName}`).then((r) => r.json()),
     rename: async (projectSlug, oldPath, newPath) =>

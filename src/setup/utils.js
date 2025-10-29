@@ -35,9 +35,13 @@ export function checkFor(cmd, missing = []) {
   try {
     return execSync(`${cmd} --version`, { env: process.env }).toString().trim();
   } catch (e) {
-    missing.push(cmd);
-    console.log(e);
-    console.error(`Command "${cmd}" does not appear to be available`);
+    try {
+      return execSync(`${cmd} --help`, { env: process.env }).toString().trim();
+    } catch (e) {    
+      missing.push(cmd);
+      console.log(e);
+      console.error(`Command "${cmd}" does not appear to be available`);
+    }
   }
 }
 

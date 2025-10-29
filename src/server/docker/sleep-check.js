@@ -73,7 +73,12 @@ export async function scheduleContainerCheck() {
     const limit = d.app_type === `docker` ? dockerThreshold : staticThreshold;
     if (diff > limit) {
       log(`"${image}" was last touched ${diff} min ago, stopping container`);
-      stopContainer({ slug: image });
+      const project = getProject(image);
+      if (!project) {
+        console.error(`Could not resolve slug "${image}" to a project?`);
+      } else {
+        stopContainer(project);
+      }
     }
   });
 

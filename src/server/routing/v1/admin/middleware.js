@@ -14,6 +14,7 @@ export function loadAdminData(req, res, next) {
     projectList: Database.getAllProjects(),
     containerList: Docker.getAllRunningContainers(),
     serverList: Docker.getAllRunningStaticServers(),
+    superuser: Database.isSuperUser(res.locals.user),
   };
   next();
 }
@@ -22,27 +23,24 @@ export function loadAdminData(req, res, next) {
 
 export function stopServer(req, res, next) {
   try {
-    Docker.stopStaticServer(req.params.name);
+    Docker.stopStaticServer({ slug: req.params.name });
     next();
   } catch (e) {
     next(e);
   }
+}
+
+export function toggleSuperUser(req, res, next) {
+  Database.toggleSuperUser(res.locals.user);
+  next();
 }
 
 // Container related routes
 
-export function deleteContainer(req, res, next) {
-  try {
-    Docker.deleteContainer(containerreq.params.idId);
-    next();
-  } catch (e) {
-    next(e);
-  }
-}
-
 export function stopContainer(req, res, next) {
   try {
-    Docker.stopContainer(req.params.image);
+    const project = Database.getProject(req.params.image);
+    if (project) Docker.stopContainer(project);
     next();
   } catch (e) {
     next(e);

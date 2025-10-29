@@ -1,21 +1,13 @@
 import { setupFileTree } from "./files/file-tree-utils.js";
-import { addEventHandling } from "./editor/event-handling.js";
+import { setupUIEventHandling } from "./editor/event-handling.js";
 import { updatePreview } from "./preview/preview.js";
 
-const { projectId, projectSlug } = document.body.dataset;
+// CodeMirror 6 has no built in file browser, so we need to add one.
+await setupFileTree();
 
-new (class Editor {
-  constructor() {
-    Object.assign(this, { projectId, projectSlug });
-    this.init();
-  }
+// As such, we also need custom handling for things like
+// the settings button, download, rewind, etc.
+setupUIEventHandling();
 
-  async init() {
-    // CodeMirror 6 has no built in file browser, so we need to add one.
-    await setupFileTree(this);
-    // As such, we also need custom handling for editor panes and tabs
-    addEventHandling(this.projectSlug);
-    updatePreview();
-    // FIXME: TODO: just move this stuff here. https://github.com/Pomax/make-webbly-things/issues/101
-  }
-})();
+// And in order to get the preview going, we trigger an update.
+updatePreview();

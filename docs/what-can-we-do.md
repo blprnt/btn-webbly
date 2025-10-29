@@ -15,7 +15,7 @@ As an anonymous visitor, you can...
 
 - Load the landing page (obviously =D),
 - Sign up by picking a user name and primary authentication method (but note that signing in doesn't actually give you a "working" account, you first need to be approved by an admin), and
-- Load projects in the editor and see the code and site preview.
+- Load projects in the editor and see the code and site preview, including starter projects shown on the landing page.
 
 You won't be able to edit any code, but you can look at all every file that is visiable to not-project-members, and you can see the resulting site running in the "preview" (which is of course not a preview at all, that's just literally the live site).
 
@@ -25,9 +25,9 @@ As a registered user whose account has not yet been activated, you can do the sa
 
 - Download projects when you're in the editor. This will let you download the public files as a convenient .zip file.
 - Add additional auth providers so you won't be locked out of your account if you lose access to the primary provider you picked when you signed up.
-- Log using any of your chosen providers, which will "land" you on your personal page. Although the only thing that'll let you do is log out, or open your profile page.
+- Log in using any of your chosen providers, which will "land" you on your personal page. Although the only thing that'll let you do is log out, or open your profile page.
+- Generate "direct login links" so you can log yourself in on other devices by sending yourself a link (these are single-use links that expire after 12 hours).
 - Edit your profile in terms of your bio (which you can write using markdown) and the links you want people to see (like your homepage, github profile url, mastodon account, etc. etc)
-
 
 ## registered, activated user
 
@@ -42,7 +42,7 @@ As a signed in and approved user you can do everything the platform was meant fo
   - you can create a folder called `.data` that counts as the only safe place to put private project data (This folder will not be copied over when someone remixes your project)
   - you can download your project as zip file with both public and private data included
   - you can force-restart your project's docker container, which is useful for when it gets stuck, or when you're running a project that doesn't auto-reload things when you change source files.
-- Remix projects, using the sparkle button. This creates a new copy of the public code parts with either a name you pick, or "yourusername-projectname" (so you'll probably want to rename it afterwards!). Note that you can remix _any_ project, so that includes your own!
+- Remix projects, using the remix link. This creates a new copy of the public code parts with either a name you pick, or "yourusername-projectname" (so you'll probably want to rename it afterwards!). Note that you can remix _any_ project, so that includes your own!
 
 ## admins
 
@@ -55,3 +55,5 @@ As an admin, you can do everything a regular user can do, but also...
   - see a list of active static servers, with an option to stop them.
 
 You are also able to load suspended projects in the editor, so you can see what a project does without "running" it, and inspect and edit other folk's project settings.
+
+Finally, as admin you toggle your `superuser` flag, which lets you perform things like editing files in any user's projects, including updating project settings.
