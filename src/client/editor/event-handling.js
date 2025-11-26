@@ -3,6 +3,7 @@ import { API } from "../utils/api.js";
 import { Notice } from "../utils/notifications.js";
 import { Rewinder } from "../files/rewind.js";
 import { handleFileHistory } from "../files/websocket-interface.js";
+import { LogView } from "./log-view.js";
 
 const mac = navigator.userAgent.includes(`Mac OS`);
 const { projectId, projectSlug, useWebsockets } = document.body.dataset;
@@ -21,6 +22,7 @@ export function setupUIEventHandling() {
   connectPrettierButton();
   enableRewindFunctions();
   addTabScrollHandling();
+  enableLogViewer();
 
   // Lastly: make sure we can tell whether or not this
   // document is "dead" and about to get cleaned up.
@@ -106,7 +108,7 @@ function enableRewindFunctions() {
       const fileEntry = document.querySelector(`file-entry[path="${path}"]`);
       if (fileEntry) {
         const { rewind } = fileEntry.state ?? {};
-        if (rewind && rewind.open) {
+        if (rewind?.open) {
           fileTree.classList.remove(`rewinding`);
           Rewinder.close();
         } else {
@@ -156,4 +158,14 @@ function addTabScrollHandling() {
       scrollTabs(2);
     });
   }
+}
+
+function enableLogViewer() {
+  const viewLogs = document.querySelector(`.view-logs`);
+  if (!viewLogs) return;
+
+  const logViewer = new LogView(viewLogs);
+  viewLogs?.addEventListener(`click`, () => {
+    logViewer.toggle();
+  });
 }

@@ -1,14 +1,12 @@
-import { resolve, join } from "node:path";
+import { join } from "node:path";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 
-import * as User from "../server/database/user.js";
 import * as Project from "../server/database/project.js";
+import * as User from "../server/database/user.js";
+import { Models } from "../server/database/index.js";
 
-import dotenv from "@dotenvx/dotenvx";
-import { CONTENT_DIR, scrubDateTime, ROOT_DIR } from "../helpers.js";
-const envPath = resolve(join(ROOT_DIR, `.env`));
-dotenv.config({ quiet: true, path: envPath });
+import { CONTENT_DIR, scrubDateTime } from "../helpers.js";
 
 import { stdin } from "../setup/utils.js";
 
@@ -37,9 +35,9 @@ export function randomDockerProjectName() {
  */
 export async function createDockerProject(run = true, gracePeriod = 500) {
   // create a docker project...
-  const user = User.getUser(`test-user`);
+  const user = createUser();
   const slug = randomDockerProjectName();
-  const project = Project.createProjectForUser(user, slug);
+  const project = createProject(slug, user);
   project.updated_at = scrubDateTime(new Date(0).toISOString());
 
   Project.updateSettingsForProject(project, {
@@ -53,7 +51,7 @@ export async function createDockerProject(run = true, gracePeriod = 500) {
   try {
     mkdirSync(projectDir);
     mkdirSync(projectContainerDir);
-  } catch (e) {}
+  } catch {}
 
   writeFileSync(
     join(projectContainerDir, `run.sh`),
@@ -92,14 +90,65 @@ export async function createDockerProject(run = true, gracePeriod = 500) {
  */
 export async function tryFor(asyncFn, timeout = 5000, interval = 500) {
   if (timeout < interval) return;
-  return new Promise(async (resolve, reject) => {
+  return new Promise(async (resolve) => {
     try {
       const result = await asyncFn();
       resolve(result);
-    } catch (e) {
+    } catch {
       setTimeout(() => {
         resolve(tryFor(asyncFn, timeout - interval, interval));
       }, interval);
     }
   });
+}
+
+export function createUser(name = randomUUID()) {
+  const user = Models.User.create({ name });
+  return user;
+}
+
+export function createAdminUser(slug) {
+  const user = createUser(slug);
+
+  Models.Admin.create({ user_id: user.id });
+
+  return user;
+}
+
+export const WITH_SETTINGS = true;
+export const WITHOUT_SETTINGS = false;
+
+export function createProject(
+  projectName = randomUUID(),
+  usernameOrUser = randomUUID(),
+  withSettings = WITH_SETTINGS,
+) {
+  let user;
+
+  if (typeof usernameOrUser === "string") {
+    user = createUser(usernameOrUser);
+  } else {
+    user = usernameOrUser;
+  }
+
+  // The user must be enabled for various Project calls to succeed
+  User.enableUser(user);
+
+  const project = Project.createProjectForUser(user, projectName);
+
+  if (!withSettings) {
+    delete project.settings;
+  }
+
+  return project;
+}
+
+export function createStarterProject(
+  projectName,
+  usernameOrUser,
+  withSettings = WITH_SETTINGS,
+) {
+  const project = createProject(projectName, usernameOrUser, withSettings);
+  Models.StarterProject.create({ project_id: project.id });
+  return project;
 }

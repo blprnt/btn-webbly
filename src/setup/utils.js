@@ -1,8 +1,8 @@
 import readline from "node:readline";
 import { join } from "node:path";
-import { mkdirSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { execSync } from "node:child_process";
-import { TESTING, ROOT_DIR } from "../helpers.js";
+import { TESTING, ROOT_DIR, npm } from "../helpers.js";
 
 // We want to make sure that test setup does
 // NOT overwrite our "production" settings!
@@ -21,6 +21,24 @@ export const stdin = readline.createInterface({
 // used by various execSync operations
 export const STDIO = process.argv.includes(`--debug`) ? `inherit` : `ignore`;
 
+// Parse an .env file
+export function parseEnvironment(envFile = join(SETUP_ROOT_DIR, `.env`)) {
+  console.log(`Using ${envFile}`);
+  if (existsSync(envFile)) {
+    const data = readFileSync(envFile).toString();
+    const entries = Object.fromEntries(
+      data
+        .split(`\n`)
+        .filter(Boolean)
+        .map((e) => e.split(`=`).map((v) => v.trim().replaceAll(`"`, ``))),
+    );
+    const keys = Object.keys(entries);
+    for (const k of keys) {
+      process.env[k] = entries[k];
+    }
+  }
+}
+
 // Rather important for testing:
 export function closeReader() {
   try {
@@ -37,7 +55,7 @@ export function checkFor(cmd, missing = []) {
   } catch (e) {
     try {
       return execSync(`${cmd} --help`, { env: process.env }).toString().trim();
-    } catch (e) {    
+    } catch (e) {
       missing.push(cmd);
       console.log(e);
       console.error(`Command "${cmd}" does not appear to be available`);
@@ -99,6 +117,7 @@ export function randomSecret() {
  * Make sure dependencies are installed.
  */
 export function runNpmInstall() {
-  execSync(`npm i`, { shell: true, stdio: `inherit` });
-  () => console.log(`\n`);
+  console.log(`Running npm install...`);
+  execSync(`${npm} install`, { stdio: `ignore` });
+  console.log(`Done.\n`);
 }

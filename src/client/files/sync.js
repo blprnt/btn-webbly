@@ -1,4 +1,4 @@
-import { createPatch, applyPatch } from "/vendor/diff.js";
+import { createPatch } from "/vendor/diff.js";
 import {
   fetchFileContents,
   getFileSum,
@@ -22,7 +22,9 @@ export async function syncContent(projectSlug, fileEntry, forced = false) {
 
   const { path } = fileEntry;
   const { editorEntry } = fileEntry.state;
+  if (!editorEntry) return;
   if (!editorEntry.editable) return;
+  if (editorEntry.virtual) return;
 
   // Do we even have something to sync, here?
   const { content: currentContent, view } = editorEntry;

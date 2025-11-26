@@ -27,9 +27,12 @@ export function addGitTracking(dir, msg = `initial commit`) {
   const cmd = [
     `cd ${dir}`,
     `git init --initial-branch=main`,
+    `git config --local user.email "editor@editordomain"`,
+    `git config --local user.name "editor"`,
     `git add .`,
     `git commit --allow-empty -m "${msg}"`,
   ];
+
   return execSync(cmd.join(` && `));
 }
 
@@ -100,7 +103,7 @@ export function getFileHistory(projectSlug, filepath) {
  */
 export function processFileHistory(filepath, data) {
   const lines = data.split(/\r?\n/);
-  let commits = [];
+  const commits = [];
   let currentCommit;
 
   do {
@@ -222,7 +225,7 @@ function processDiff(diff) {
   // If not, that leaves a regular content change
   const hunks = [];
   let currentHunk;
-  for (let line of diff) {
+  for (const line of diff) {
     if (line.startsWith(`@@`)) {
       const [_, a, b, suffix] = line.match(/@@ (\S+) (\S+) @@(.*)/);
       currentHunk = { a, b, suffix, lines: [] };
@@ -263,7 +266,7 @@ function reverseHunks(diff) {
   if (diff.hunks) {
     return {
       hunks: diff.hunks.map((c) => {
-        let lines = [];
+        const lines = [];
         let minus = [];
         let plus = [];
 

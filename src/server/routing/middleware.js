@@ -61,15 +61,18 @@ export function pageNotFound(req, res) {
  * ...docs go here...
  */
 export async function bindUser(req, res = { locals: {} }, next = () => {}) {
-  let fallback = {};
+  let user;
 
   if (process.argv.includes(`--admin-mode`)) {
-    const user = getUser(1);
+    res.locals.temporaryAdminMode = true;
+    user = getUser(1);
     user.admin = true;
-    fallback = { user };
   }
 
-  const { user } = req.session.passport ?? req.session ?? fallback;
+  if (!user) {
+    ({ user } = req.session.passport ?? req.session ?? {});
+  }
+
   res.locals.user = user;
 
   if (user?.admin) {
@@ -304,7 +307,7 @@ export function loadStarters(req, res, next) {
  * ...docs go here...
  */
 export async function parseBodyText(req, res, next) {
-  let chunks = [];
+  const chunks = [];
   req.on("data", (chunk) => chunks.push(chunk));
   req.on("end", () => {
     req.body = Buffer.concat(chunks).toString(`utf-8`);
@@ -326,10 +329,10 @@ function getDelimiter(req) {
  */
 export async function parseMultiPartBody(req, res, next) {
   const delimiter = getDelimiter(req);
-  const endMarker = delimiter.replace(`\r\n`, ``) + `--`;
+  const endMarker = `${delimiter.replace(`\r\n`, ``)}--`;
 
   const data = await (() => {
-    let chunks = [];
+    const chunks = [];
     return new Promise((resolve, reject) => {
       req.on("data", (chunk) => chunks.push(chunk));
       req.on("end", () => resolve(Buffer.concat(chunks)));
@@ -360,7 +363,7 @@ export async function parseMultiPartBody(req, res, next) {
     do {
       if (parseMode === HEADER) {
         const cut = block.indexOf(`\r\n`) + 2;
-        let line = block.substring(0, cut);
+        const line = block.substring(0, cut);
         block = block.substring(cut);
 
         if (line.includes(`Content-Disposition`)) {

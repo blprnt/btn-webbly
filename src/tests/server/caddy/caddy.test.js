@@ -1,12 +1,6 @@
 import test, { describe } from "node:test";
 import assert from "node:assert/strict";
-import { resolve, join } from "node:path";
 import * as Caddy from "../../../server/caddy/caddy.js";
-import { ROOT_DIR } from "../../../helpers.js";
-
-import dotenv from "@dotenvx/dotenvx";
-const envPath = resolve(join(ROOT_DIR, `.env`));
-dotenv.config({ quiet: true, path: envPath });
 
 const bindings = Caddy.portBindings;
 
@@ -34,7 +28,7 @@ describe(`Caddy test`, async () => {
 
   test(`updateCaddyFile`, () => {
     Caddy.updateCaddyFile(project, 0);
-    assert.deepEqual(bindings[project.slug], { port: 0 });
+    assert.deepEqual(bindings[project.slug], new Caddy.PortBinding(0));
   });
 
   test(`removeCaddyEntry`, () => {

@@ -1,4 +1,3 @@
-import { execSync } from "node:child_process";
 import { join, resolve } from "node:path";
 import {
   cpSync,
@@ -28,6 +27,7 @@ import {
 import {
   checkContainerHealth,
   deleteContainerAndImage,
+  getContainerLogs,
   renameContainer,
   restartContainer,
   runContainer,
@@ -138,7 +138,7 @@ export async function createProjectDownload(req, res, next) {
   const zipDir = resolve(join(CONTENT_DIR, `__archives`));
   if (!pathExists(zipDir)) mkdirSync(zipDir);
 
-  const dest = resolve(zipDir, slug) + `.zip`;
+  const dest = `${resolve(zipDir, slug)}.zip`;
   res.locals.zipFile = dest;
 
   const output = createWriteStream(dest);
@@ -333,6 +333,20 @@ export async function loadProjectHistory(req, res, next) {
       return { hash, timestamp, reason };
     });
     res.locals.history = parsed;
+  }
+  next();
+}
+
+/**
+ * Get a project's console logs
+ */
+export async function getProjectLogs(req, res, next) {
+  const { project } = res.locals.lookups;
+  const { slug } = project;
+  const { since } = req.params;
+  const binding = portBindings[slug];
+  if (binding && !binding.serverProcess) {
+    res.locals.logs = getContainerLogs(project, since);
   }
   next();
 }

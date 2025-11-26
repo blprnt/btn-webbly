@@ -1,10 +1,11 @@
-import test, { after, before, describe } from "node:test";
+import test, { after, before, beforeEach, describe } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, rmSync } from "node:fs";
-import { resolve, join } from "node:path";
+import { join } from "node:path";
 import {
   initTestDatabase,
   concludeTesting,
+  clearTestData,
 } from "../../../../../server/database/index.js";
 import * as Middleware from "../../../../../server/routing/v1/projects/middleware.js";
 import * as FileMiddleware from "../../../../../server/routing/v1/files/middleware.js";
@@ -14,22 +15,20 @@ import {
 } from "../../../../test-helpers.js";
 import { closeReader } from "../../../../../setup/utils.js";
 import { portBindings } from "../../../../../server/caddy/caddy.js";
-import { CONTENT_DIR, ROOT_DIR } from "../../../../../helpers.js";
-
-import dotenv from "@dotenvx/dotenvx";
-const envPath = resolve(join(ROOT_DIR, `.env`));
-dotenv.config({ quiet: true, path: envPath });
+import { CONTENT_DIR } from "../../../../../helpers.js";
 
 const WITHOUT_RUNNING = false;
 const FORCE_CLEANUP = true;
 
 describe(`project middlerware tests`, async () => {
   before(async () => await initTestDatabase());
+  beforeEach(() => clearTestData());
   after(() => {
     concludeTesting();
     closeReader();
   });
 
+  // FIXME: This test has flaked 2 times so far, see: https://github.com/Pomax/make-webbly-things/issues/211
   test(`checkProjectHealth`, async () => {
     const { res, cleanup } = await createDockerProject();
     await new Promise((resolve) => {

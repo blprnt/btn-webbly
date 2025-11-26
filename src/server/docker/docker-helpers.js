@@ -1,11 +1,12 @@
 import { sep } from "node:path";
 import {
+  BYPASS_DOCKER,
   CONTENT_BASE,
   getFreePort,
   STARTER_BASE,
   TESTING,
 } from "../../helpers.js";
-import { exec, execSync } from "child_process";
+import { exec, execSync } from "node:child_process";
 import {
   portBindings,
   removeCaddyEntry,
@@ -21,6 +22,8 @@ import { scheduleScreenShot } from "../screenshots/screenshot.js";
  * ...docs go here...
  */
 export function checkContainerHealth(project, slug = project.slug) {
+  if (BYPASS_DOCKER) return `not running`;
+
   const check = `docker ps --no-trunc -f name=^/${slug}$`;
   const result = execSync(check).toString().trim();
   if (result.includes(`Exited`)) {
@@ -42,6 +45,8 @@ export function checkContainerHealth(project, slug = project.slug) {
  * ...docs go here...
  */
 export function deleteContainer(project, slug = project.slug) {
+  if (BYPASS_DOCKER) return;
+
   try {
     execSync(`docker container rm ${slug}`, { stdio: `ignore` });
   } catch (e) {
@@ -58,6 +63,8 @@ export function deleteContainer(project, slug = project.slug) {
  * ...docs go here...
  */
 export function deleteContainerAndImage(project) {
+  if (BYPASS_DOCKER) return;
+
   console.log(`removing container and image...`);
   stopContainer(project);
   deleteContainer(project);
@@ -67,6 +74,8 @@ export function deleteContainerAndImage(project) {
  * ...docs go here...
  */
 export function getAllRunningContainers() {
+  if (BYPASS_DOCKER) return [];
+
   const containerData = [];
   const output = execSync(`docker ps -a --no-trunc --format json`)
     .toString()
@@ -99,9 +108,32 @@ export function getAllRunningStaticServers() {
 }
 
 /**
+ * Get a container's log ouput, optionally "since some specific time"
+ */
+export function getContainerLogs(project, since = 0) {
+  if (BYPASS_DOCKER) return false;
+  const { slug } = project;
+  const cmd = `docker container logs --since ${since} ${slug}`;
+  try {
+    const output = execSync(cmd).toString();
+    // And now for the stupid part:
+    const datetime = execSync(cmd.replace(`--since`, `-t --since`))
+      .toString()
+      .split(`\n`)
+      .at(-2)
+      .replace(/Z.*/, `Z`);
+    return { output, datetime };
+  } catch {
+    return false;
+  }
+}
+
+/**
  * ...docs go here...
  */
 export function renameContainer(oldSlug, newSlug) {
+  if (BYPASS_DOCKER) return;
+
   stopContainer(oldSlug);
   try {
     execSync(`docker tag ${oldSlug} ${newSlug}`);
@@ -113,6 +145,8 @@ export function renameContainer(oldSlug, newSlug) {
  * ...docs go here...
  */
 export async function restartContainer(project, rebuild = false) {
+  if (BYPASS_DOCKER) return;
+
   const { slug } = project;
   if (rebuild) {
     console.log(`rebuilding container for ${slug}...`);
@@ -122,7 +156,6 @@ export async function restartContainer(project, rebuild = false) {
     console.log(`restarting container for ${slug}...`);
     try {
       execSync(`docker container restart -t 0 ${slug}`);
-      portBindings[slug].restarts ??= 0;
       portBindings[slug].restarts++;
     } catch (e) {
       // if an admin force-stops this container, we can't "restart".
@@ -136,6 +169,13 @@ export async function restartContainer(project, rebuild = false) {
  * ...docs go here...
  */
 export async function runContainer(project, slug = project.slug) {
+  if (BYPASS_DOCKER) {
+    if (project.settings?.app_type === `static`) {
+      runStaticServer(project);
+    }
+    return;
+  }
+
   // note: we assume the caller already checked for project
   // suspension, so we don't try to use the database here.
   const isStarter = isStarterProject(project);
@@ -224,18 +264,30 @@ export async function runStaticServer(project) {
     `--port ${port}`,
     `--root "${root}"`,
     isStarter ? `--starter` : ``,
+    // This part exists solely because GitGub Actions don't
+    // support kill, which is INSANE and means that we can't
+    // just use serverPocess.kill() to gracefully shut down
+    // server instances during tests inside gh actions.
+    // So smart! Thanks GitHub!
+    TESTING ? `--with-shutdown` : ``,
   ].join(` `);
   const runCommand = `node src/server/static.js ${opts}`;
   if (TESTING) console.log({ runCommand });
-  const child = exec(runCommand, { shell: true, stdio: `inherit` });
   const binding = updateCaddyFile(project, port);
-  binding.serverProcess = child;
+  binding.serverProcess = exec(runCommand);
 }
 
 /**
  * ...docs go here...
  */
 export function stopContainer(project, slug = project.slug) {
+  if (BYPASS_DOCKER) {
+    if (project.settings?.app_type === `static`) {
+      stopStaticServer(project);
+    }
+    return;
+  }
+
   try {
     execSync(`docker container stop ${slug}`, { stdio: `ignore` });
   } catch (e) {
@@ -248,12 +300,21 @@ export function stopContainer(project, slug = project.slug) {
  * ...docs go here...
  */
 export function stopStaticServer(project, slug = project.slug) {
-  const { serverProcess } = portBindings[slug] ?? {};
+  const { port, serverProcess } = portBindings[slug] ?? {};
   if (serverProcess) {
-    if (process.platform === "win32") {
-      execSync(`taskkill /pid ${serverProcess.pid} /f /t`);
+    if (TESTING) {
+      // This part exists solely because GitGub Actions don't
+      // support kill, which is INSANE and means that we can't
+      // just use serverPocess.kill() to gracefully shut down
+      // server instances during tests inside gh actions.
+      // So smart! Thanks GitHub!
+      fetch(`http://localhost:${port}/shutdown`);
     } else {
-      serverProcess.kill(`SIGINT`);
+      if (process.platform === "win32") {
+        execSync(`taskkill /pid ${serverProcess.pid} /f /t`);
+      } else {
+        serverProcess.kill(`SIGINT`);
+      }
     }
     removeCaddyEntry(project);
   }

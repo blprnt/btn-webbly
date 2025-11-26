@@ -119,7 +119,7 @@ const dataPath = join(ROOT_DIR, `data`);
  * Are we on the right version of the database?
  */
 export async function getMigrationStatus() {
-  let version = db.prepare(`PRAGMA user_version`).get().user_version;
+  const version = db.prepare(`PRAGMA user_version`).get().user_version;
   const { files } = readContentDir(join(dataPath, `migrations`));
   const migrations = files
     .map((v) => parseFloat(v.match(/\d+/)?.[0]))
@@ -177,14 +177,21 @@ export async function initTestDatabase() {
   Models.Remix.findOrCreate({ original_id: starter.id, project_id });
 }
 
+export function clearTestData() {
+  if (!TESTING) return;
+  db.exec(`DELETE FROM users`);
+  db.exec(`DELETE FROM projects`);
+  db.exec(`DELETE FROM remix`);
+  db.exec(`DELETE FROM starter_projects`);
+  db.exec(`DELETE FROM admin_table`);
+}
+
 /**
  *
  * @returns
  */
 export function concludeTesting() {
   if (!TESTING) return;
-  db.exec(`DELETE FROM users`);
-  db.exec(`DELETE FROM projects`);
-  db.exec(`DELETE FROM remix`);
+  clearTestData();
   db.close();
 }

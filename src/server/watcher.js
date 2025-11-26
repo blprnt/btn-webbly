@@ -1,13 +1,10 @@
 import { watch } from "node:fs";
 import { join } from "node:path";
 import { execSync } from "node:child_process";
-import { readContentDir, getFileSum } from "../helpers.js";
-
-const isWindows = process.platform === `win32`;
-const npm = isWindows ? `npm.cmd` : `npm`;
+import { readContentDir, getFileSum, npm } from "../helpers.js";
 
 let rebuildLock = false;
-let fileHashes = {};
+const fileHashes = {};
 
 /**
  * Trigger a rebuild by telling npm to run the `build` script from package.json.
@@ -15,8 +12,8 @@ let fileHashes = {};
 function rebuild() {
   console.log(`rebuilding`);
   const start = Date.now();
-  execSync(`${npm} run build:es`, { stdio: `inherit` });
-  (console.log(`Build took ${Date.now() - start}ms`), 8);
+  execSync(`${npm} run bundle`, { stdio: `inherit` });
+  console.log(`Build took ${Date.now() - start}ms`);
   rebuildLock = false;
 }
 

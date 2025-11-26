@@ -1,6 +1,6 @@
 import net from "node:net";
 import { join, resolve, sep, posix } from "node:path";
-import { exec, execSync } from "node:child_process";
+import { exec } from "node:child_process";
 import { existsSync, globSync, lstatSync, readFileSync } from "node:fs";
 import * as AuthSettings from "./server/routing/auth/settings.js";
 import express from "express";
@@ -8,14 +8,11 @@ import nocache from "nocache";
 import helmet from "helmet";
 import asciify from "any-ascii";
 
-// Explicit env loading as we rely on process.env
-// at the module's top level scope...
-import dotenv from "@dotenvx/dotenvx";
-const envPath = join(import.meta.dirname, `../.env`);
-dotenv.config({ path: envPath, quiet: true });
+export const BYPASS_DEPENDENCIES = !!process.env.BYPASS_DEPENDENCIES;
+export const BYPASS_DOCKER = !!process.env.BYPASS_DOCKER || BYPASS_DEPENDENCIES;
+export const BYPASS_CADDY = !!process.env.BYPASS_CADDY || BYPASS_DEPENDENCIES;
 
 export const TESTING = process.env.NODE_ENV === `TESTING`;
-
 export const isWindows = process.platform === `win32`;
 export const npm = isWindows ? `npm.cmd` : `npm`;
 export const npx = isWindows ? `npx.cmd` : `npx`;
@@ -178,7 +175,7 @@ export function setDefaultAspects(app) {
  * Make git not guess at the name and email for commits.
  */
 export async function setupGit(dir, projectSlug) {
-  for (let cfg of [
+  for (const cfg of [
     `init.defaultBranch main`,
     `user.name "${projectSlug}"`,
     `user.email "actions@makewebblythings.local"`,
@@ -195,7 +192,7 @@ export function slugify(text) {
   text = asciify(text).toLowerCase();
   return text
     .replace(/\s+/g, `-`)
-    .replace(/[<\._>]/g, ``)
+    .replace(/[<._>]/g, ``)
     .replace(
       /[\u0021-\u002C\u002E-\u002F\u003A-\u0040\u005B-\u0060\u007B-\u00BF]+/g,
       ``,
