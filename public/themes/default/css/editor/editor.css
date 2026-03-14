@@ -103,6 +103,7 @@ html {
           }
 
           .link-back,
+          .link-help,
           .link-remix {
             color: var(--editor-nav-top-text);
             margin: 0.25em;

@@ -93,6 +93,15 @@ export function setupRoutes(app) {
       }),
   );
 
+  // help page
+  app.get(`/help`, bindCommonValues, (req, res) =>
+    res.render(`help.html`, {
+      ...process.env,
+      ...res.locals,
+      ...req.session,
+    }),
+  );
+
   // static routes for the website itself
   app.use(`/`, noStaticHTML, express.static(`public`, { etag: false }));
   app.use(`/default`, express.static(`content/default`, { etag: false }));
