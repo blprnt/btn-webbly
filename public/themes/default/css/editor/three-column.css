@@ -101,12 +101,13 @@
 
           background: var(--divider-handle-background);
           color: var(--divider-handle-color);
-          font-family: Verdana;
+          font-family: var(--font-body);
           text-align: center;
 
           box-sizing: border-box;
-          border: 1px solid var(--divider-handle-border-color);
+          border: none;
           border-radius: 1em;
+          box-shadow: 0 2px 8px rgba(22, 81, 81, 0.15);
 
           &:hover {
             background: var(--divider-handle-hovered-background);
@@ -149,20 +150,23 @@
   footer {
     position: fixed;
     z-index: 1;
-    right: 0.5em;
-    bottom: 0.5em;
-    border: 1px solid var(--three-column-footer-border-color);
-    border-radius: 0.5em;
-    padding: 0.5em;
+    right: 0.75em;
+    bottom: 0.75em;
+    border: none;
+    border-radius: 6px;
+    padding: 0.4em 0.8em;
     background: var(--three-column-footer-background);
-    box-shadow: 2px 2px 0 3px var(--three-column-footer-box-shadow);
+    box-shadow: 0 2px 10px var(--three-column-footer-box-shadow);
 
     a,
     a:visited {
-      font-family: Arial;
+      font-family: var(--font-body);
+      font-size: 0.8em;
+      font-weight: 300;
       text-decoration: none;
       color: var(--three-column-footer-link-color);
-      text-shadow: 0 0 1px var(--three-column-footer-link-text-shadow);
+      opacity: 0.85;
+      &:hover { opacity: 1; }
     }
   }
 }

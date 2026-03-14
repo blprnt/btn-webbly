@@ -21,10 +21,10 @@ file-tree {
   --indent: 1em;
   --entry-padding: 0.25em;
 
-  --highlight-background: lightcyan;
-  --highlight-background-bw: #ddd;
-  --highlight-border-color: blue;
-  --drop-target-color: rgb(205, 255, 242);
+  --highlight-background: rgba(12, 124, 127, 0.12);
+  --highlight-background-bw: #E8E7E2;
+  --highlight-border-color: transparent;
+  --drop-target-color: rgba(12, 124, 127, 0.1);
 
   position: relative;
 
@@ -40,7 +40,7 @@ file-tree {
         width: calc(100% + 0.5em);
         background: var(--highlight-background-bw);
         text-align: center;
-        border-bottom: 1px solid black;
+        border-bottom: none;
       }
     }
   }
@@ -113,9 +113,8 @@ file-tree {
   .selected {
     & > entry-heading {
       background: var(--highlight-background);
-      border: 1px solid var(--highlight-border-color);
-      margin-top: -1px;
-      margin-bottom: -1px;
+      border: none;
+      border-radius: 3px;
       padding-left: var(--entry-padding);
       padding-right: var(--entry-padding);
     }

@@ -55,23 +55,23 @@
 
   /* THREE COLUMN */
 
-  --three-column-highlight-color: blue;
-  --column-background: white;
-  --divider-handle-background: white;
-  --divider-handle-color: orange;
-  --divider-handle-border-color: grey;
-  --divider-handle-hovered-background: #eee;
-  --divider-handle-dot-background: grey;
-  --divider-active-handle-background: #d0e4f0;
-  --three-column-footer-border-color: grey;
-  --three-column-footer-background: #44ffd8;
-  --three-column-footer-box-shadow: black;
-  --three-column-footer-link-color: black;
-  --three-column-footer-link-text-shadow: white;
+  --three-column-highlight-color: #0C7C7F;
+  --column-background: #FAFAF7;
+  --divider-handle-background: #F2F1EA;
+  --divider-handle-color: #165151;
+  --divider-handle-border-color: transparent;
+  --divider-handle-hovered-background: #E4A100;
+  --divider-handle-dot-background: #0C7C7F;
+  --divider-active-handle-background: #0C7C7F;
+  --three-column-footer-border-color: transparent;
+  --three-column-footer-background: #165151;
+  --three-column-footer-box-shadow: rgba(0,0,0,0.25);
+  --three-column-footer-link-color: #F2F1EA;
+  --three-column-footer-link-text-shadow: transparent;
 
   /* EDITOR */
 
-  --editor-neutral-background-color: #eee;
+  --editor-neutral-background-color: #F2F1EA;
   --editor-nav-top-background: #F2F1EA;
   --editor-nav-top-text: #165151;
 
@@ -93,11 +93,11 @@
   --editor-tab-close-hovered-background: red;
   --editor-tab-close-hovered-color: white;
   --editor-tab-border-color: black;
-  --editor-active-tab-background: #e3f6ff;
-  --editor-active-tab-text: #333;
+  --editor-active-tab-background: #F2F1EA;
+  --editor-active-tab-text: #165151;
   --editor-moving-tab-background: #e7e3ff;
 
-  --editors-group-border-color: grey;
+  --editors-group-border-color: transparent;
 
   --editor-button-border-color: #555;
   --editor-clear-button-border-color: #444;

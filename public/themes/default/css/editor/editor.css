@@ -78,8 +78,7 @@ html {
         justify-content: center;
         height: calc(var(--header-row-height) - 2px);
         background: var(--editor-neutral-background-color);
-        border: 1px solid var(--editor-tab-border-color);
-        border-top: none;
+        border: none;
       }
 
       #buttons {
@@ -278,8 +277,8 @@ html {
         min-height: var(--editor-height);
         max-height: var(--editor-height);
         overflow: auto;
-        border: 1px solid var(--editors-group-border-color);
-        width: calc(100% - 2px);
+        border: none;
+        width: 100%;
 
         .editor.panel {
           display: none;
