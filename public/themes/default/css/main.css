@@ -77,18 +77,23 @@ html {
 
       #help-link {
         position: absolute;
-        bottom: 0.5em;
+        bottom: 0.6em;
         right: 1em;
         font-family: var(--font-body);
-        font-size: 0.9em;
-        color: #F2F1EA;
-        opacity: 0.75;
+        font-size: 0.85em;
+        font-weight: 400;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: #165151;
+        background: #F2F1EA;
         text-decoration: none;
-        border-bottom: 1px solid rgba(242, 241, 234, 0.4);
+        padding: 0.3em 0.8em;
+        border-radius: 4px;
+        transition: background 0.15s, color 0.15s;
 
         &:hover {
-          opacity: 1;
-          color: #F2F1EA;
+          background: #E4A100;
+          color: #165151;
         }
       }
 
