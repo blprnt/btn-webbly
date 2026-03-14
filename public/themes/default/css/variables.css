@@ -1,4 +1,9 @@
+@import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@900&family=Inter:wght@300;400&display=swap');
+
 :root {
+  --font-heading: 'Crimson Pro', Georgia, serif;
+  --font-body: 'Inter', Verdana, sans-serif;
+
   --white: white;
   --black: black;
 
@@ -126,12 +131,12 @@
 
   /* MAIN */
 
-  --home-background: #fbdd85;
-  --body-background: #fff4d9;
-  --body-box-shadow: #ff8300;
-  --heading-background: white;
-  --heading-color: #333;
-  --heading-border-color: black;
+  --home-background: #165151;
+  --body-background: #F2F1EA;
+  --body-box-shadow: #165151;
+  --heading-background: #165151;
+  --heading-color: #F2F1EA;
+  --heading-border-color: #0C7C5F;
 
   --username-input-taken-background: rgba(255, 0, 0, 0.2);
   --username-input-taken-border-color: red;

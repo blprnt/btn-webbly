@@ -23,12 +23,14 @@ html {
     padding: 1em;
     padding-bottom: 0;
 
-    font-family: Verdana;
+    font-family: var(--font-body);
+    font-weight: 300;
     font-size: 14px;
 
     h1,
     h2,
     footer {
+      font-family: var(--font-heading);
       font-size: 2em;
       background: var(--heading-background);
       color: var(--heading-color);
@@ -44,6 +46,20 @@ html {
 
     h2 {
       margin-top: 1.5em;
+    }
+
+    #site-title {
+      font-family: var(--font-heading);
+      font-size: 2.8em;
+      background: var(--heading-background);
+      color: var(--heading-color);
+      border-bottom: 4px solid var(--heading-border-color);
+      position: relative;
+      left: -1em;
+      width: calc(100% + 1em);
+      padding: 0.4em 0.6em;
+      margin: 0 0 1em 0;
+      letter-spacing: 0.02em;
     }
 
     hr {
