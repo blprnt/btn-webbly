@@ -144,16 +144,16 @@
   /* These could use more semantic of names, but right now they are scoped
   inside an `li` so until we refactor that, this is the clearest */
 
-  --li-background: #fffdfa;
-  --li-border-color: black;
-  --li-header-background: white;
-  --li-header-border-color: #666;
+  --li-background: #F8F7F2;
+  --li-border-color: transparent;
+  --li-header-background: #165151;
+  --li-header-border-color: transparent;
   --li-iframe-background: white;
-  --li-iframe-border-color: grey;
-  --li-screenshot-border-color: grey;
-  --li-edit-project-settings-button-background: blue;
-  --li-edit-project-settings-button-color: white;
-  --li-delete-project-button-background: red;
-  --li-delete-project-button-color: white;
-  --li-date-color: grey;
+  --li-iframe-border-color: transparent;
+  --li-screenshot-border-color: transparent;
+  --li-edit-project-settings-button-background: #0C7C5F;
+  --li-edit-project-settings-button-color: #F2F1EA;
+  --li-delete-project-button-background: #D7282A;
+  --li-delete-project-button-color: #F2F1EA;
+  --li-date-color: #888;
 }
