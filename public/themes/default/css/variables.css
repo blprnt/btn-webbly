@@ -72,17 +72,17 @@
   /* EDITOR */
 
   --editor-neutral-background-color: #eee;
-  --editor-nav-top-background: white;
-  --editor-nav-top-text: black;
+  --editor-nav-top-background: #F2F1EA;
+  --editor-nav-top-text: #165151;
 
-  --editor-utilities-bar-background: #662584;
-  --editor-utilities-button-background: white;
-  --editor-utilities-button-border-color: #30ae97;
-  --editor-utilities-button-box-shadow: #00ffcf;
+  --editor-utilities-bar-background: #165151;
+  --editor-utilities-button-background: #F2F1EA;
+  --editor-utilities-button-border-color: #0C7C5F;
+  --editor-utilities-button-box-shadow: rgba(0,0,0,0.15);
 
-  --editor-project-name-background: #662584;
-  --editor-project-name-text-shadow: black;
-  --editor-project-name-text: white;
+  --editor-project-name-background: #0C7C5F;
+  --editor-project-name-text-shadow: rgba(0,0,0,0.3);
+  --editor-project-name-text: #F2F1EA;
 
   --editor-dir-color: #666;
   --editor-file-color: #222;
@@ -102,12 +102,12 @@
   --editor-button-border-color: #555;
   --editor-clear-button-border-color: #444;
   --editor-clear-button-text: #999;
-  --editor-active-button-color: white;
-  --editor-active-button-background: darkgreen;
-  --editor-active-button-border-color: green;
-  --editor-active-button-hovered-background: rgb(0, 50, 0);
-  --editor-active-button-active-color: darkgreen;
-  --editor-active-button-active-background: white;
+  --editor-active-button-color: #F2F1EA;
+  --editor-active-button-background: #0C7C5F;
+  --editor-active-button-border-color: #165151;
+  --editor-active-button-hovered-background: #165151;
+  --editor-active-button-active-color: #0C7C5F;
+  --editor-active-button-active-background: #F2F1EA;
 
   --graphics-element-table-slider-wrapper-background: #ececec;
   --preview-group-border-color: gray;
