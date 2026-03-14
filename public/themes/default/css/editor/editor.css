@@ -143,11 +143,29 @@ html {
             padding: 0 0.7em;
             box-shadow: 0 1px 3px var(--editor-utilities-button-box-shadow);
             transition: background 0.15s, color 0.15s;
+            position: relative;
 
             &:hover {
               background: #0C7C5F;
               color: #F2F1EA;
               border-color: #0C7C5F;
+            }
+
+            &[title]:hover::after {
+              content: attr(title);
+              position: absolute;
+              top: calc(100% + 6px);
+              left: 50%;
+              transform: translateX(-50%);
+              background: #165151;
+              color: #F2F1EA;
+              font-family: var(--font-body);
+              font-size: 0.85em;
+              white-space: nowrap;
+              padding: 0.3em 0.6em;
+              border-radius: 4px;
+              pointer-events: none;
+              z-index: 100;
             }
           }
         }
