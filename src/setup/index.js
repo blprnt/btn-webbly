@@ -23,6 +23,10 @@ import { setupCaddy } from "../server/caddy/caddy.js";
 import { setupDocker } from "./docker.js";
 import { setupSqlite } from "./sqlite.js";
 
+// If there's an .env file, we want to make sure we preload that data
+import { parseEnvironment } from "../parse-environment.js";
+parseEnvironment();
+
 const dbPath = join(SETUP_ROOT_DIR, `data`, `data.sqlite3`);
 const BYPASS_FINISH = pathExists(dbPath);
 const DOCKER_MAINTENANCE = process.argv.includes(`--clean`);
@@ -36,9 +40,9 @@ export function runSetup() {
   setup(
     checkNodeVersion,
     runNpmInstall,
-    checkDependencies,
     setupHooks,
     setupEnv,
+    checkDependencies,
     setupDocker,
     DOCKER_MAINTENANCE ? noop : () => setupCaddy(process.env),
     DOCKER_MAINTENANCE ? noop : setupSqlite,

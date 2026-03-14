@@ -1,6 +1,9 @@
 // This test script uses Codemirror v6
 import { basicSetup, EditorView } from "codemirror";
 import { EditorState, Compartment } from "@codemirror/state";
+import { indentUnit } from "@codemirror/language";
+import { keymap } from "@codemirror/view";
+import { indentMore, indentLess } from "@codemirror/commands";
 
 // Language-specific features:
 import { css } from "@codemirror/lang-css";
@@ -9,7 +12,82 @@ import { markdown } from "@codemirror/lang-markdown";
 import { javascript } from "@codemirror/lang-javascript";
 // See https://github.com/orgs/codemirror/repositories?q=lang for more options
 
+import { Notice, createOneTimeNotice } from "../utils/notifications";
+
 const editable = !!document.body.dataset.projectMember;
+const INDENT_STRING = `  `;
+
+/**
+ * Add "normal code editor" tab handling, for indenting/outdenting blocks.
+ * This also has the same "Replace text with spaces" that you get in sublime
+ * or vs code, when you select a bunch of text in a single line.
+ */
+function addTabHandling(extensions) {
+  let bypassTabs = false;
+
+  const TAB_NOTICE_TEXT = `Using tab for code indentation. To tab out of the editor, press escape first.`;
+
+  extensions.push(
+    indentUnit.of(INDENT_STRING),
+    EditorState.tabSize.of(INDENT_STRING.length),
+    // This part works, though.
+    keymap.of([
+      {
+        key: `Escape`,
+        run: () => {
+          bypassTabs = true;
+          new Notice(
+            `Escaping the editor: pressing tab will now focus on the next focusable element on the page.`,
+          );
+        },
+      },
+      {
+        key: `Tab`,
+        preventDefault: true,
+        run: (view) => {
+          if (bypassTabs) return (bypassTabs = false);
+          createOneTimeNotice(TAB_NOTICE_TEXT, 5000);
+
+          // Multi line selection = indent
+          const { doc, selection } = view.state;
+          const { ranges } = selection ?? {};
+          const aLine = doc.lineAt(ranges.at(0).from);
+          const hLine = doc.lineAt(ranges.at(-1).to);
+          const multiline = aLine.number !== hLine.number;
+          if (multiline) return indentMore(view);
+
+          // single line: do we indent, or insert space?
+          const pos = selection.main.head;
+          const { from, to } = ranges[0] ?? {};
+
+          // scoped helper function for single line "add spaces somewhere":
+          const indent = (from, to = from) => {
+            view.dispatch({
+              changes: { from, to, insert: INDENT_STRING },
+              selection: { anchor: from + INDENT_STRING.length },
+            });
+            return true;
+          };
+
+          // text selection = replace with spaces
+          if (from !== to) return indent(from, to);
+
+          // Anything else = insert spaces
+          return indent(pos);
+        },
+      },
+      {
+        key: `Shift-Tab`,
+        preventDefault: true,
+        run: (view) => {
+          if (bypassTabs) return (bypassTabs = false);
+          createOneTimeNotice(TAB_NOTICE_TEXT, 5000);
+          return indentLess(view);
+        },
+      },
+    ]),
+  );
+}
 
 /**
  * Create an initial CodeMirror6 state object
@@ -74,6 +152,9 @@ export function getInitialState(editorEntry, doc) {
       editorEntry.contentReset = false;
     }),
   );
+
+  // Make sure tabs are handled correctly
+  addTabHandling(extensions);
 
   // Thank god, we're done.
   return EditorState.create({ doc, extensions });
