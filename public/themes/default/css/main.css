@@ -48,6 +48,18 @@ html {
       margin-top: 1.5em;
     }
 
+    a {
+      color: #0C7C5F;
+
+      &:visited {
+        color: #165151;
+      }
+
+      &:hover {
+        color: #E4A100;
+      }
+    }
+
     #site-title {
       font-family: var(--font-heading);
       font-size: 2.8em;
@@ -58,8 +70,18 @@ html {
       left: -1em;
       width: calc(100% + 1em);
       padding: 0.4em 0.6em;
+      padding-top: 1.2em;
       margin: 0 0 1em 0;
       letter-spacing: 0.02em;
+
+      #site-bird {
+        position: absolute;
+        top: -0.1em;
+        right: 1.5em;
+        height: 1.8em;
+        width: auto;
+        transform: scaleX(1);
+      }
     }
 
     hr {
