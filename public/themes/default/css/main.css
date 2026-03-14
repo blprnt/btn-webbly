@@ -76,11 +76,10 @@ html {
 
       #site-bird {
         position: absolute;
-        top: -0.1em;
-        right: 1.5em;
-        height: 1.8em;
+        top: 0;
+        left: 0.5em;
+        height: 1.4em;
         width: auto;
-        transform: scaleX(1);
       }
     }
 
