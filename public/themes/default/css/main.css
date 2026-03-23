@@ -75,10 +75,10 @@ html {
         font-size: 2.8em;
       }
 
+      #examples-link,
       #help-link {
         position: absolute;
         bottom: 0.6em;
-        right: 1em;
         font-family: var(--font-body);
         font-size: 0.85em;
         font-weight: 400;
@@ -95,6 +95,14 @@ html {
           background: #E4A100;
           color: #165151;
         }
+      }
+
+      #examples-link {
+        right: 5em;
+      }
+
+      #help-link {
+        right: 1em;
       }
 
       #site-bird {
