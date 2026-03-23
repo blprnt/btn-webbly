@@ -9,6 +9,7 @@ import {
   getAccessFor,
 } from "./project.js";
 import { getServiceDomain, validProviders } from "../routing/auth/settings.js";
+import { notifyAdminOfSignup } from "../email.js";
 
 const {
   Access,
@@ -66,6 +67,7 @@ export function processUserSignup(username, userObject) {
   // Unknown user, and unknown service login: create a new account!
   const user = User.create({ name: username });
   Login.create({ user_id: user.id, service, service_id, service_domain });
+  notifyAdminOfSignup(username);
   return user;
 }
 
@@ -172,6 +174,25 @@ export function enableUser(user) {
   user.enabled_at = new Date().toISOString();
   User.save(user);
   return user;
+}
+
+/**
+ * Enable all users that are currently disabled (enabled_at is null),
+ * excluding admin accounts.
+ */
+export function enableAllUsers() {
+  const users = User.all(`name`);
+  const now = new Date().toISOString();
+  const enabled = [];
+  users.forEach((u) => {
+    if (u.enabled_at) return;
+    const isAdmin = Admin.find({ user_id: u.id });
+    if (isAdmin) return;
+    u.enabled_at = now;
+    User.save(u);
+    enabled.push(u);
+  });
+  return enabled;
 }
 
 /**

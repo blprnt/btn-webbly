@@ -10,6 +10,9 @@ import {
   deleteUser,
   disableUser,
   enableUser,
+  enableAllUsers,
+  featureProject,
+  unfeatureProject,
   loadAdminData,
   stopContainer,
   stopServer,
@@ -37,9 +40,12 @@ admin.post(`/container/stop/:image`, ...prechecks, stopContainer, back);
 admin.post(`/user/delete/:uid`, ...prechecks, deleteUser, back);
 admin.post(`/user/disable/:uid`, ...prechecks, disableUser, back);
 admin.post(`/user/enable/:uid`, ...prechecks, enableUser, back);
+admin.post(`/user/enable-all`, ...prechecks, enableAllUsers, back);
 admin.post(`/user/suspend/:uid`, ...prechecks, suspendUser, back);
 admin.post(`/user/unsuspend/:sid`, ...prechecks, unsuspendUser, back);
 
 admin.post(`/project/delete/:pid`, ...prechecks, deleteProject, back);
 admin.post(`/project/suspend/:pid`, ...prechecks, suspendProject, back);
 admin.post(`/project/unsuspend/:sid`, ...prechecks, unsuspendProject, back);
+admin.post(`/project/feature/:pid`, ...prechecks, featureProject, back);
+admin.post(`/project/unfeature/:pid`, ...prechecks, unfeatureProject, back);

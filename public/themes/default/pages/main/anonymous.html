@@ -131,6 +131,21 @@
   </ul>
 {% endif %}
 
+{% if courseExamples.length %}
+  <h2>Course Examples</h2>
+
+  <p>
+    Here are some projects from the community, selected as examples to learn from or remix.
+    <a href="/examples">See all course examples →</a>
+  </p>
+
+  <ul>
+    {% for project in courseExamples %}
+      {% include "fragments/project-card.html" %}
+    {% endfor %}
+  </ul>
+{% endif %}
+
 <h2>Is this open source?</h2>
 
 <p>✨ You better believe it ✨</p>

@@ -12,6 +12,15 @@
   <td>{{ project.description }}</td>
   <td>{{ project.created_at | year }}</td>
   <td>
+    {% if project.isCourseExample %}
+      <form action="/v1/admin/project/unfeature/{{ project.id }}" method="post" style="display:inline">
+        <button>unfeature</button>
+      </form>
+    {% else %}
+      <form action="/v1/admin/project/feature/{{ project.id }}" method="post" style="display:inline">
+        <button>feature as example</button>
+      </form>
+    {% endif %}
     {% if not project.activeSuspensions %}
       <form action="/v1/admin/project/suspend/{{ project.id }}" method="post">
         <input type="text" name="reason" placeholder="suspension reason" />

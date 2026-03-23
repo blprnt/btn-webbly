@@ -192,6 +192,7 @@ class Model {
 export const Models = {
   Access: new Model(`project_access`), // TODO: how do we do compound keys? https://github.com/Pomax/make-webbly-things/issues/107
   Admin: new Model(`admin_table`, `user_id`),
+  CourseExample: new Model(`course_examples`, `project_id`),
   Login: new Model(`user_logins`), // <- same here
   Project: new Model(`projects`, `id`),
   ProjectSettings: new Model(`project_settings`, `project_id`),

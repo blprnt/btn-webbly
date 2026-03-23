@@ -76,6 +76,15 @@ export function enableUser(req, res, next) {
   }
 }
 
+export function enableAllUsers(req, res, next) {
+  try {
+    Database.enableAllUsers();
+    next();
+  } catch (e) {
+    next(e);
+  }
+}
+
 export function suspendUser(req, res, next) {
   try {
     Database.suspendUser(res.locals.lookups.user, req.body.reason);
@@ -96,6 +105,24 @@ export function unsuspendUser(req, res, next) {
 }
 
 // Project related routes
+
+export function featureProject(req, res, next) {
+  try {
+    Database.addCourseExample(res.locals.lookups.project);
+    next();
+  } catch (e) {
+    next(e);
+  }
+}
+
+export function unfeatureProject(req, res, next) {
+  try {
+    Database.removeCourseExample(res.locals.lookups.project);
+    next();
+  } catch (e) {
+    next(e);
+  }
+}
 
 export function deleteProject(req, res, next) {
   // This requires a bunch of work that we're already

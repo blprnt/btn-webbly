@@ -4,6 +4,7 @@ import sqlite3 from "better-sqlite3";
 import betterSQLite3Store from "better-sqlite3-session-store";
 import {
   bindCommonValues,
+  loadCourseExamples,
   loadProjectList,
   loadProviders,
   loadStarters,
@@ -84,6 +85,7 @@ export function setupRoutes(app) {
     loadProjectList, // either user list, or global "most recent"
     loadProviders,
     loadStarters,
+    loadCourseExamples,
     (req, res) =>
       res.render(`main.html`, {
         currentTime: Date.now(),
@@ -100,6 +102,20 @@ export function setupRoutes(app) {
       ...res.locals,
       ...req.session,
     }),
+  );
+
+  // course examples page
+  app.get(
+    `/examples`,
+    bindCommonValues,
+    loadCourseExamples,
+    (req, res) =>
+      res.render(`examples.html`, {
+        currentTime: Date.now(),
+        ...process.env,
+        ...res.locals,
+        ...req.session,
+      }),
   );
 
   // static routes for the website itself

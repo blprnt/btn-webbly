@@ -22,6 +22,7 @@ export { UNKNOWN_USER, NOT_ACTIVATED, OWNER, EDITOR, MEMBER };
 
 const {
   Access,
+  CourseExample,
   Project,
   ProjectSettings,
   ProjectSuspension,
@@ -162,6 +163,7 @@ export function getAllProjects(omitStarters = true) {
     if (omitStarters && isStarterProject(p)) return;
     p.settings = ProjectSettings.find({ project_id: p.id });
     p.suspensions = [];
+    p.isCourseExample = !!CourseExample.find({ project_id: p.id });
     projectList[p.id] = p;
   });
 
@@ -291,6 +293,48 @@ export function isProjectSuspended(project) {
  */
 export function isStarterProject(project) {
   return !!StarterProject.find({ project_id: project.id });
+}
+
+/**
+ * Get all projects flagged as course examples, sorted by sort_order.
+ */
+export function getCourseExamples() {
+  const examples = CourseExample.all(`sort_order`);
+  return examples
+    .map((e) => {
+      try {
+        const p = getProject(e.project_id);
+        p.owners = getProjectOwners(p);
+        return p;
+      } catch (_) {
+        return null;
+      }
+    })
+    .filter(Boolean);
+}
+
+/**
+ * Flag a project as a course example.
+ */
+export function addCourseExample(project) {
+  if (!CourseExample.find({ project_id: project.id })) {
+    CourseExample.create({ project_id: project.id, sort_order: 0 });
+  }
+}
+
+/**
+ * Remove a project from the course examples list.
+ */
+export function removeCourseExample(project) {
+  const e = CourseExample.find({ project_id: project.id });
+  if (e) CourseExample.delete(e);
+}
+
+/**
+ * Is this project a course example?
+ */
+export function isCourseExample(project) {
+  return !!CourseExample.find({ project_id: project.id });
 }
 
 /**

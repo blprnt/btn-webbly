@@ -30,6 +30,21 @@
     </ul>
   {% endif %}
 {% endif %}
+{% if courseExamples.length %}
+  <h2>Course Examples</h2>
+
+  <p>
+    Projects selected as examples to learn from or remix.
+    <a href="/examples">See all →</a>
+  </p>
+
+  <ul>
+    {% for project in courseExamples %}
+      {% include "fragments/project-card.html" %}
+    {% endfor %}
+  </ul>
+{% endif %}
+
 {% include "fragments/settings.html" %}
 {% include "../fragments/file-issues.html" %}
 
