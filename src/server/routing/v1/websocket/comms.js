@@ -58,7 +58,23 @@ class Comms {
     action.when = Date.now();
     action.seqnum = this.#seqnums[basePath]++;
     this.#changelog[basePath].push(action);
+    this.#pruneChangelog(basePath);
     this.#broadcast(basePath, action);
+  }
+
+  // Keep only the entries that the slowest connected client might still need.
+  // If no clients are connected, clear the log entirely.
+  #pruneChangelog(basePath) {
+    const handlers = this.#handlers[basePath];
+    if (!handlers || handlers.size === 0) {
+      this.#changelog[basePath] = [];
+      return;
+    }
+    // changelog beyond 500 entries: drop the oldest half
+    const log = this.#changelog[basePath];
+    if (log.length > 500) {
+      this.#changelog[basePath] = log.slice(-250);
+    }
   }
 
   /**

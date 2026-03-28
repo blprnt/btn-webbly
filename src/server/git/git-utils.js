@@ -1,4 +1,4 @@
-import { execSync } from "node:child_process";
+import { execSync, exec } from "node:child_process";
 import { join } from "node:path";
 import * as Helpers from "../../helpers.js";
 import { getProject, isStarterProject } from "../database/project.js";
@@ -66,11 +66,9 @@ export function createRewindPoint(
     console.log(`creating rewind point`);
     const cmd = `cd ${dir} && git add . && git commit --allow-empty -m "${reason}"`;
     console.log(`running:`, cmd);
-    try {
-      execSync(cmd, { shell: true, stdio: `inherit` });
-    } catch (e) {
-      console.error(e);
-    }
+    exec(cmd, (e) => {
+      if (e) console.error(`rewind point failed for ${slug}:`, e.message);
+    });
     COMMIT_TIMEOUTS[slug] = undefined;
   }, COMMIT_TIMEOUT_MS);
 }

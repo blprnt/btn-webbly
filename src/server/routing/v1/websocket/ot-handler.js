@@ -100,7 +100,7 @@ export class OTHandler {
     // arrive in sequence with plenty of time to process them.
     for (const { type, detail } of actions) {
       this.send(type, detail);
-      await new Promise((resolve) => resolve, 15);
+      await new Promise((resolve) => setTimeout(resolve, 15));
     }
   }
 
