@@ -12,6 +12,12 @@ import { applyMigrations } from "./database/utils.js";
 const PORT = process.env.PORT ?? 8000;
 const { WEB_EDITOR_HOSTNAME } = process.env;
 
+// Prevent unhandled promise rejections from crashing the server.
+// One broken project (e.g. missing Docker image) should not take down everything.
+process.on(`unhandledRejection`, (reason) => {
+  console.error(`Unhandled promise rejection (server kept running):`, reason);
+});
+
 // Set up the server:
 const app = express();
 setupTemplating(app);

@@ -256,7 +256,10 @@ export async function runContainer(project, slug = project.slug) {
     const runFlags = `--detach --rm --stop-timeout 0 --name ${slug}`;
     const base = isStarter ? STARTER_BASE : CONTENT_BASE;
     const bindMount = `--mount type=bind,src=.${sep}${base}${sep}${slug},dst=/app`;
-    const envVars = Object.entries(getProjectEnvironmentVariables(project))
+    const envVars = Object.entries({
+      PORT: `8000`,
+      ...getProjectEnvironmentVariables(project),
+    })
       .map(([k, v]) => `-e ${k}="${v}"`)
       .join(` `);
     const entry = `/bin/sh .container/run.sh`;
@@ -267,6 +270,7 @@ export async function runContainer(project, slug = project.slug) {
       execSync(runCommand);
     } catch (e) {
       console.error(`Failed to run project!`, e);
+      return `failed`;
     }
   }
 
