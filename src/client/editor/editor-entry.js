@@ -48,8 +48,16 @@ export class EditorEntry {
   }
 
   static getOrCreateFileEditTab(fileEntry, virtual = false) {
-    const entry = EditorEntry.entries.find((e) => e.fileEntry === fileEntry);
-    if (entry) return entry.select();
+    const entry = EditorEntry.entries.find(
+      (e) => e.fileEntry.path === fileEntry.path,
+    );
+    if (entry) {
+      // The file tree was rebuilt (e.g. on WS reconnect) — update the stored
+      // reference so the tab stays live with the new DOM element.
+      entry.fileEntry = fileEntry;
+      fileEntry.setState({ editorEntry: entry });
+      return entry.select();
+    }
     return new EditorEntry(fileEntry, virtual);
   }
 
