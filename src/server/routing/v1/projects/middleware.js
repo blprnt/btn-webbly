@@ -370,16 +370,13 @@ export async function remixProject(req, res, next) {
     // Just in case our users are lazy and don't rename remixes,
     // let's make sure we generate a unique name using the age-old
     // solution of "slapping a number at the end":
-    let suffix;
-    let newSlug = slugify(newProjectName);
-    if (existsSync(join(CONTENT_DIR, newSlug))) {
-      suffix = 2;
-      const nextFreeDir = slugify(`${newSlug}-${suffix}`);
-      while (existsSync(join(CONTENT_DIR, nextFreeDir))) {
-        suffix += 1;
-      }
+    const baseSlug = slugify(newProjectName);
+    let newSlug = baseSlug;
+    let suffix = 2;
+    while (existsSync(join(CONTENT_DIR, newSlug))) {
+      newSlug = `${baseSlug}-${suffix}`;
+      suffix++;
     }
-    if (suffix) newSlug = `${newSlug}-${suffix}`;
 
     // Now that we have a valid slug, let's create a new project.
     const newProject = (res.locals.newProject = createProjectForUser(
