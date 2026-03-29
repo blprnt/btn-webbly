@@ -394,14 +394,14 @@ export async function remixProject(req, res, next) {
 
     recordProjectRemix(project, newProject);
 
-// Fix ownership for Docker container compatibility
-try {
-  const projectPath = join(CONTENT_DIR, newProjectSlug);
-  execSync(`chown -R 1001:1001 "${projectPath}"`, { stdio: 'ignore' });
-  console.log(`Fixed ownership for ${newProjectSlug}`);
-} catch (error) {
-  console.warn(`Warning: Failed to fix ownership for ${newProjectSlug}:`, error.message);
-}
+    // Fix ownership so the Docker container user (UID 1001) can write to the project files
+    try {
+      const projectPath = join(CONTENT_DIR, newProjectSlug);
+      await execPromise(`chown -R 1001:1001 "${projectPath}"`);
+      console.log(`Fixed ownership for ${newProjectSlug}`);
+    } catch (error) {
+      console.warn(`Warning: Failed to fix ownership for ${newProjectSlug}:`, error.message);
+    }
 
     const s = copyProjectSettings(project, newProject);
     const containerDir = join(CONTENT_DIR, newProjectSlug, `.container`);
