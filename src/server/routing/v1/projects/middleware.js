@@ -54,6 +54,7 @@ import {
 import { portBindings, removeCaddyEntry } from "../../../caddy/caddy.js";
 import { runProject } from "../../../database/project.js";
 import { addGitTracking } from "../../../git/git-utils.js";
+import { randomProjectName } from "../../../utils/word-lists.js";
 
 /**
  * ...docs go here...
@@ -364,18 +365,14 @@ export async function remixProject(req, res, next) {
 
   const { project } = lookups;
   const isStarter = isStarterProject(project);
-  const newProjectName = req?.params?.newname ?? `${user.name}-${project.slug}`;
 
   try {
-    // Just in case our users are lazy and don't rename remixes,
-    // let's make sure we generate a unique name using the age-old
-    // solution of "slapping a number at the end":
-    const baseSlug = slugify(newProjectName);
-    let newSlug = baseSlug;
-    let suffix = 2;
+    // Generate a unique random name; retry if the directory already exists.
+    let newSlug = req?.params?.newname
+      ? slugify(req.params.newname)
+      : randomProjectName();
     while (existsSync(join(CONTENT_DIR, newSlug))) {
-      newSlug = `${baseSlug}-${suffix}`;
-      suffix++;
+      newSlug = randomProjectName();
     }
 
     // Now that we have a valid slug, let's create a new project.
