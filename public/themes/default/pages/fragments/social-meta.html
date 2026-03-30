@@ -1,0 +1,18 @@
+{% set _title = og_title or "Binoculars to Binomials" %}
+{% set _desc = og_description or "A creative coding workshop platform." %}
+{% set _url = og_url or ("https://" + WEB_EDITOR_HOSTNAME) %}
+{% set _image = og_image or ("https://" + WEB_EDITOR_HOSTNAME + "/bird.avif") %}
+
+<meta name="description" content="{{ _desc }}" />
+
+<meta property="og:site_name" content="Binoculars to Binomials" />
+<meta property="og:type" content="{{ og_type or 'website' }}" />
+<meta property="og:title" content="{{ _title }}" />
+<meta property="og:description" content="{{ _desc }}" />
+<meta property="og:url" content="{{ _url }}" />
+<meta property="og:image" content="{{ _image }}" />
+
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="{{ _title }}" />
+<meta name="twitter:description" content="{{ _desc }}" />
+<meta name="twitter:image" content="{{ _image }}" />
