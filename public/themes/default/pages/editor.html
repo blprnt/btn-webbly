@@ -136,7 +136,9 @@
       <h2>This is your project!</h2>
       <p>It's called <strong>{{ project.name }}</strong>.</p>
       <p>You can change the name (and other settings) by clicking the <strong>settings</strong> button in the top-left corner.</p>
-      <button autofocus onclick="document.getElementById('welcome-dialog').close()">Got it!</button>
+      <form method="dialog">
+        <button autofocus>Got it!</button>
+      </form>
     </dialog>
     <script>
       document.getElementById('welcome-dialog').showModal();
