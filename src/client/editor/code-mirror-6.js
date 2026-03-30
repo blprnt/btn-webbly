@@ -10,6 +10,7 @@ import { css } from "@codemirror/lang-css";
 import { html } from "@codemirror/lang-html";
 import { markdown } from "@codemirror/lang-markdown";
 import { javascript } from "@codemirror/lang-javascript";
+import { p5Completions } from "./p5-completions.js";
 // See https://github.com/orgs/codemirror/repositories?q=lang for more options
 
 import { Notice, createOneTimeNotice } from "../utils/notifications";
@@ -131,6 +132,7 @@ export function getInitialState(editorEntry, doc) {
     md: markdown,
   }[fileExtension];
   if (syntax) extensions.push(syntax());
+  if (fileExtension === `js`) extensions.push(p5Completions);
 
   // Then we have to manually add debounced content change
   // syncing, as a CM6 plugin, because CM6 has nothing built
