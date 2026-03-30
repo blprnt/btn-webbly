@@ -36,9 +36,11 @@
             <a class="link-help" href="https://{{ WEB_EDITOR_HOSTNAME }}/help"
               >help</a
             >
-            <span class="projectname" title="{{ project.name }}"
-              >{{ project.name }}</span
-            >
+            {% if editRights and projectOwner %}
+              <button class="projectname project-settings" title="Change project settings">{{ project.name }}</button>
+            {% else %}
+              <span class="projectname" title="{{ project.name }}">{{ project.name }}</span>
+            {% endif %}
             {% if user and user.enabled_at %}
               <a
                 class="link-remix"
@@ -50,13 +52,8 @@
           </div>
           <div>
             {% if user %}
-              {% if editRights and projectOwner %}
-                <button
-                  class="project-settings"
-                  title="change your project settings"
-                >
-                  settings
-                </button>
+              {% if editRights %}
+                <button class="view-logs" title="View server logs">logs</button>
               {% endif %}
               {% if user.enabled_at and not starter %}
                 <button id="download" title="Download this project as a .zip">
@@ -64,10 +61,11 @@
                 </button>
               {% endif %}
               {% if editRights %}
-                <button id="format" title="Make my code pretty!">🤩</button>
+                <button id="format" title="Format code (Prettier)">🤩</button>
                 <button id="rewind" title="Use the time machine!">🔄</button>
               {% endif %}
             {% endif %}
+            <span id="save-status"></span>
           </div>
         </div>
 
@@ -77,12 +75,6 @@
             class="full-height" readonly
           {% endif %}
         ></file-tree>
-
-        {% if editRights %}
-          <div class="utility">
-            <button class="view-logs">view logs</button>
-          </div>
-        {% endif %}
       </div>
 
       <div class="full resize">
@@ -92,11 +84,11 @@
       <div class="middle column">
         <div id="tabnav">
           <div id="left">
-            <button>〈</button>
+            <button title="Scroll tabs left">〈</button>
           </div>
           <div id="tabs"></div>
           <div id="right">
-            <button>〉</button>
+            <button title="Scroll tabs right">〉</button>
           </div>
         </div>
         <div id="editors"></div>
@@ -108,6 +100,7 @@
 
       <div class="right column" id="preview" style="position:relative">
         <span id="preview-buttons">
+          <span id="preview-label">Live preview</span>
           {% if user and app_type != "static" %}
             <button class="restart" title="Restart your host container">
               restart
@@ -135,7 +128,7 @@
     <dialog id="welcome-dialog">
       <h2>This is your project!</h2>
       <p>It's called <strong>{{ project.name }}</strong>.</p>
-      <p>You can change the name (and other settings) by clicking the <strong>settings</strong> button in the top-left corner.</p>
+      <p>You can change the name (and other settings) by clicking the <strong>{{ project.name }}</strong> button in the top-left corner.</p>
       <form method="dialog">
         <button autofocus>Got it!</button>
       </form>

@@ -33,6 +33,7 @@ export async function updatePreview() {
     // console.log(`checking container for ready`);
     const status = await API.projects.health(projectSlug);
     if (status === `failed`) {
+      preview.classList.remove(`loading`);
       // There's only so many times we'll try a failure reload.
       if (failures < 3) {
         failures++;
@@ -40,13 +41,16 @@ export async function updatePreview() {
       }
       return new ErrorNotice(`Project failed to start...`);
     } else if (status === `not running` || status === `wait`) {
+      preview.classList.add(`loading`);
       if (first_time_load < 10) {
         return setTimeout(updatePreview, 1000);
       } else {
+        preview.classList.remove(`loading`);
         return console.log(`this project failed to start in a timely manner.`);
       }
     }
   }
+  preview.classList.remove(`loading`);
 
   newFrame.onerror = () => {
     console.log(`what?`, e);

@@ -9,6 +9,17 @@ import { API } from "../utils/api.js";
 import { Rewinder } from "./rewind.js";
 
 const { useWebsockets } = document.body.dataset;
+const saveStatus = document.getElementById(`save-status`);
+let saveStatusTimer;
+
+function setSaveStatus(text) {
+  if (!saveStatus) return;
+  clearTimeout(saveStatusTimer);
+  saveStatus.textContent = text;
+  if (text === `Saved`) {
+    saveStatusTimer = setTimeout(() => (saveStatus.textContent = ``), 3000);
+  }
+}
 
 /**
  * Sync the content of a file with the server by calculating
@@ -33,11 +44,13 @@ export async function syncContent(projectSlug, fileEntry, forced = false) {
 
   // We do!
   const patch = createPatch(path, currentContent, newContent);
+  setSaveStatus(`Saving…`);
 
   // sync via websocket or REST?
   if (useWebsockets) {
     editorEntry.setContent(newContent);
     fileEntry.updateContent(`diff`, patch);
+    setSaveStatus(`Saved`);
   }
 
   // REST updates require a lot more work.
@@ -46,6 +59,7 @@ export async function syncContent(projectSlug, fileEntry, forced = false) {
     const responseHash = parseFloat(await response.text());
     if (responseHash === getFileSum(newContent)) {
       editorEntry.setContent(newContent);
+      setSaveStatus(`Saved`);
       updatePreview();
     } else {
       // If we get here, then something went wrong.

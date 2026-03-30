@@ -35,9 +35,7 @@ html {
         overflow-x: auto;
         white-space: nowrap;
 
-        height: calc(
-          100% - var(--header-block-height) - var(--header-row-height) - 0.5em
-        );
+        height: calc(100% - var(--header-block-height) - 0.5em);
 
         &.full-height {
           height: calc(100% - 2.5em - 1px);
@@ -124,10 +122,25 @@ html {
             text-align: center;
             text-overflow: ellipsis;
             background: var(--editor-project-name-background);
+            /* When it's a button (for owners), inherit the look */
+            &:is(button) {
+              cursor: pointer;
+              border: none;
+              box-shadow: none;
+              font-size: inherit;
+              letter-spacing: normal;
+              &:hover {
+                text-decoration: underline;
+              }
+            }
           }
 
-          .project-settings {
-            flex-grow: 1;
+          #save-status {
+            font-size: 0.75em;
+            opacity: 0.6;
+            padding: 0 0.4em;
+            white-space: nowrap;
+            transition: opacity 0.3s;
           }
 
           button {
@@ -311,14 +324,39 @@ html {
             opacity 0.25s,
             background-color 0.25s linear;
         }
-        &.restarting iframe {
+        &.restarting iframe,
+        &.loading iframe {
           background-color: var(--preview-restarting-iframe-background);
+        }
+        &.loading::after {
+          content: "Starting…";
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          font-family: var(--font-body);
+          font-size: 1em;
+          opacity: 0.5;
+          pointer-events: none;
+          z-index: 1;
         }
         #preview-buttons {
           position: absolute;
           right: 1em;
           top: 0.5em;
           z-index: 2;
+          display: flex;
+          align-items: center;
+          gap: 0.4em;
+        }
+        #preview-label {
+          font-size: 0.7em;
+          opacity: 0.5;
+          font-family: var(--font-body);
+          letter-spacing: 0.05em;
+          text-transform: uppercase;
+          pointer-events: none;
+          margin-right: 0.2em;
         }
       }
 

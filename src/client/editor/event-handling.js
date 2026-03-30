@@ -4,6 +4,7 @@ import { Notice } from "../utils/notifications.js";
 import { Rewinder } from "../files/rewind.js";
 import { handleFileHistory } from "../files/websocket-interface.js";
 import { LogView } from "./log-view.js";
+import { EditorEntry } from "./editor-entry.js";
 
 const mac = navigator.userAgent.includes(`Mac OS`);
 const { projectId, projectSlug, useWebsockets } = document.body.dataset;
@@ -35,12 +36,14 @@ export function setupUIEventHandling() {
  * ...docs go here...
  */
 function disableSaveHotkey() {
-  // disable the "Save page" shortcut because it's meaningless in this context.
+  // Intercept Ctrl/Cmd+S: trigger an immediate sync and confirm to the user.
   document.addEventListener(`keydown`, (evt) => {
     const { key, ctrlKey, metaKey } = evt;
     if (key === `s`) {
       if ((mac && metaKey) || ctrlKey) {
         evt.preventDefault();
+        const active = EditorEntry.getEntries().find(e => e.tab?.classList.contains(`active`));
+        active?.sync();
         new Notice(`Your files are auto-saved =)`, 2000);
       }
     }

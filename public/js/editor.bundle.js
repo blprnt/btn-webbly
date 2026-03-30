@@ -270,19 +270,23 @@ async function updatePreview() {
   if (first_time_load++ < 10) {
     const status = await API.projects.health(projectSlug);
     if (status === `failed`) {
+      preview.classList.remove(`loading`);
       if (failures < 3) {
         failures++;
         return setTimeout(updatePreview, 1e3);
       }
       return new ErrorNotice(`Project failed to start...`);
     } else if (status === `not running` || status === `wait`) {
+      preview.classList.add(`loading`);
       if (first_time_load < 10) {
         return setTimeout(updatePreview, 1e3);
       } else {
+        preview.classList.remove(`loading`);
         return console.log(`this project failed to start in a timely manner.`);
       }
     }
   }
+  preview.classList.remove(`loading`);
   newFrame.onerror = () => {
     console.log(`what?`, e);
   };
@@ -30903,6 +30907,16 @@ var Rewinder = class _Rewinder {
 
 // src/client/files/sync.js
 var { useWebsockets } = document.body.dataset;
+var saveStatus = document.getElementById(`save-status`);
+var saveStatusTimer;
+function setSaveStatus(text) {
+  if (!saveStatus) return;
+  clearTimeout(saveStatusTimer);
+  saveStatus.textContent = text;
+  if (text === `Saved`) {
+    saveStatusTimer = setTimeout(() => saveStatus.textContent = ``, 3e3);
+  }
+}
 async function syncContent(projectSlug6, fileEntry, forced = false) {
   if (Rewinder.active && !forced) return;
   const { path: path2 } = fileEntry;
@@ -30914,14 +30928,17 @@ async function syncContent(projectSlug6, fileEntry, forced = false) {
   const newContent = view.state.doc.toString();
   if (newContent === currentContent) return;
   const patch = createPatch(path2, currentContent, newContent);
+  setSaveStatus(`Saving\u2026`);
   if (useWebsockets) {
     editorEntry.setContent(newContent);
     fileEntry.updateContent(`diff`, patch);
+    setSaveStatus(`Saved`);
   } else {
     const response = await API.files.sync(projectSlug6, path2, patch);
     const responseHash = parseFloat(await response.text());
     if (responseHash === getFileSum(newContent)) {
       editorEntry.setContent(newContent);
+      setSaveStatus(`Saved`);
       updatePreview();
     } else {
       if (document.body.dataset.projectMember) {
@@ -33027,6 +33044,8 @@ function disableSaveHotkey() {
     if (key === `s`) {
       if (mac2 && metaKey || ctrlKey) {
         evt.preventDefault();
+        const active = EditorEntry.getEntries().find((e2) => e2.tab?.classList.contains(`active`));
+        active?.sync();
         new Notice(`Your files are auto-saved =)`, 2e3);
       }
     }

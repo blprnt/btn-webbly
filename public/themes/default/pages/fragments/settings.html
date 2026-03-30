@@ -12,28 +12,17 @@
         <div>
           <label>Project name:</label>
           <input type="text" value="" name="name" />
-          <span>{{ project.slug }}</span>
         </div>
         <div>
           <label>Project description:</label>
           <textarea rows="4" name="description"></textarea>
         </div>
         <div>
-          {% set type = project.app_type %}
-          <label>Project type {{ type }}:</label>
+          <label>Project type:</label>
           <input type="radio" name="app_type" value="static" id="static" />
           <label for="static">static content</label>
           <input type="radio" name="app_type" value="docker" id="docker" />
           <label for="docker">persistent process</label>
-        </div>
-        <div>
-          <label>Static content root dir:</label>
-          <input
-            type="text"
-            value=""
-            name="root_dir"
-            placeholder="leave blank for project root dir"
-          />
         </div>
       </fieldset>
 
@@ -44,32 +33,42 @@
             type="text"
             value=""
             name="default_file"
-            placeholder="i.e. the file that gets opened when you load the editor"
+            placeholder="The file that opens when you load the editor"
           />
         </div>
 
-        <div>
-          <label>Default folders to show collapsed:</label>
-          <textarea
-            rows="4"
-            name="default_collapse"
-            placeholder="Each folder name should be on its own line, and if it's a nested folder: remember to specify the full path."
-          ></textarea>
-        </div>
-
-        <div class="docker-only">
-          <label>Run script:</label>
-          <textarea rows="4" name="run_script"></textarea>
-        </div>
-
-        <div class="docker-only">
-          <label>Environment variables:</label>
-          <textarea
-            rows="4"
-            name="env_vars"
-            placeholder="One per line, as varname=value"
-          ></textarea>
-        </div>
+        <details>
+          <summary>Advanced settings</summary>
+          <div>
+            <label>Static content root dir:</label>
+            <input
+              type="text"
+              value=""
+              name="root_dir"
+              placeholder="Leave blank for project root dir"
+            />
+          </div>
+          <div>
+            <label>Default folders to show collapsed:</label>
+            <textarea
+              rows="4"
+              name="default_collapse"
+              placeholder="Each folder name should be on its own line, and if it's a nested folder: remember to specify the full path."
+            ></textarea>
+          </div>
+          <div class="docker-only">
+            <label>Run script:</label>
+            <textarea rows="4" name="run_script"></textarea>
+          </div>
+          <div class="docker-only">
+            <label>Environment variables:</label>
+            <textarea
+              rows="4"
+              name="env_vars"
+              placeholder="One per line, as varname=value"
+            ></textarea>
+          </div>
+        </details>
       </fieldset>
 
       <input type="reset" value="cancel" />
@@ -101,6 +100,16 @@
 
     d.querySelector(`.projectname`).textContent = settings.name;
     Object.keys(settings).forEach(template);
+
+    // Show/hide docker-only fields based on current app_type selection
+    function updateDockerFields() {
+      const isDocker = d.querySelector(`[name="app_type"]:checked`)?.value === `docker`;
+      d.querySelectorAll(`.docker-only`).forEach(el => {
+        el.style.display = isDocker ? `` : `none`;
+      });
+    }
+    d.querySelectorAll(`[name="app_type"]`).forEach(r => r.addEventListener(`change`, updateDockerFields));
+    updateDockerFields();
 
     d.querySelector(`[type="reset"]`).addEventListener(`click`, () => {
       d.close();
