@@ -71,6 +71,7 @@ projects.get(
       ...res.locals,
       ...req.session,
       ...process.env,
+      new: req.query.new,
     }),
 );
 
@@ -118,7 +119,7 @@ projects.get(
   bindCommonValues,
   verifyLogin,
   remixProject,
-  (req, res) => res.redirect(`/v1/projects/edit/${res.locals.newProjectSlug}`),
+  (req, res) => res.redirect(`/v1/projects/edit/${res.locals.newProjectSlug}?new=1`),
 );
 
 /**

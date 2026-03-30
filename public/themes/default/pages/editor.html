@@ -131,6 +131,19 @@
 
     {% include "fragments/settings.html" %}
 
+    {% if new == "1" and projectOwner %}
+    <dialog id="welcome-dialog">
+      <h2>This is your project!</h2>
+      <p>It's called <strong>{{ project.name }}</strong>.</p>
+      <p>You can change the name (and other settings) by clicking the <strong>settings</strong> button in the top-left corner.</p>
+      <button autofocus onclick="document.getElementById('welcome-dialog').close()">Got it!</button>
+    </dialog>
+    <script>
+      document.getElementById('welcome-dialog').showModal();
+      history.replaceState(null, '', location.pathname);
+    </script>
+    {% endif %}
+
     <script src="/js/editor.bundle.js" type="module" async></script>
   </body>
 </html>

@@ -4,7 +4,7 @@
     <h3>
       <a
         class="load-project"
-        href="https://{{ WEB_EDITOR_HOSTNAME }}/v1/projects/edit/{{ project.slug }}"
+        href="https://{{ WEB_EDITOR_HOSTNAME }}/v1/projects/{% if starter %}remix{% else %}edit{% endif %}/{{ project.slug }}"
         >{{ project.name }}</a
       >
     </h3>
@@ -48,22 +48,22 @@
       src="https://{{ project.slug }}.{{ WEB_EDITOR_APPS_HOSTNAME }}/?v={{ currentTime }}"
     ></iframe>
   {% else %}
-    <picture class="screenshot">
-      <source srcset="/screenshots/{{ project.slug }}.png" type="image/png" />
-      <img src="/screenshots/default.png" />
-    </picture>
+    {% if starter and user %}
+      <a href="https://{{ WEB_EDITOR_HOSTNAME }}/v1/projects/remix/{{ project.slug }}">
+        <picture class="screenshot">
+          <source srcset="/screenshots/{{ project.slug }}.png" type="image/png" />
+          <img src="/screenshots/default.png" />
+        </picture>
+      </a>
+    {% else %}
+      <picture class="screenshot">
+        <source srcset="/screenshots/{{ project.slug }}.png" type="image/png" />
+        <img src="/screenshots/default.png" />
+      </picture>
+    {% endif %}
   {% endif %}
 
-  {% if starter %}
-    {% if user %}
-      <p>
-        <a
-          href="https://{{ WEB_EDITOR_HOSTNAME }}/v1/projects/remix/{{ project.slug }}"
-          >Click here to start a new project based on this starter!</a
-        >
-      </p>
-    {% endif %}
-  {% else %}
+  {% if not starter %}
     <p class="date">
       Created {{ project.created_at | year }}, last updated
       {{
