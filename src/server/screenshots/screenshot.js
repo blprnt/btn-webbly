@@ -34,15 +34,23 @@ export async function scheduleScreenShot(project, bypass = TESTING) {
 async function screenshot(slug, bypass = TESTING) {
   if (bypass) return;
 
-  const browser = await chromium.launch();
-  const context = await browser.newContext({
-    viewport: { width: 1000, height: 600 },
-  });
-  const page = await context.newPage();
-  await page.goto(`https://${slug}.${WEB_EDITOR_APPS_HOSTNAME}`);
-  await new Promise((resolve) => setTimeout(resolve, 3000));
-  const screenshot = join(SCREENSHOT_DIR, `${slug}.png`);
-  await page.screenshot({ path: screenshot });
-  console.log(`Updated ${screenshot}`);
-  await browser.close();
+  let browser;
+  try {
+    browser = await chromium.launch();
+    const context = await browser.newContext({
+      viewport: { width: 1000, height: 600 },
+    });
+    const page = await context.newPage();
+    await page.goto(`https://${slug}.${WEB_EDITOR_APPS_HOSTNAME}`, {
+      timeout: 15000,
+    });
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+    const screenshotPath = join(SCREENSHOT_DIR, `${slug}.png`);
+    await page.screenshot({ path: screenshotPath, timeout: 15000 });
+    console.log(`Updated ${screenshotPath}`);
+  } catch (e) {
+    console.warn(`Screenshot failed for ${slug}: ${e.message}`);
+  } finally {
+    await browser?.close();
+  }
 }

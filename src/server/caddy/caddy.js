@@ -81,17 +81,15 @@ export function startCaddy() {
  * Stop caddy.
  */
 export function stopCaddy() {
-  // TODO: this should honestly run until there's no caddy process left
-  // in the process list, but that needs to happen in a cross-platform,
-  // dependeny-cless way.
   // https://github.com/Pomax/make-webbly-things/issues/106
-  try {
-    execSync(`caddy stop`, { shell: true, stdio: `inherit` });
-    execSync(`caddy stop`, { shell: true, stdio: `inherit` });
-    execSync(`caddy stop`, { shell: true, stdio: `inherit` });
-    execSync(`caddy stop`, { shell: true, stdio: `inherit` });
-    execSync(`caddy stop`, { shell: true, stdio: `inherit` });
-  } catch (e) {}
+  for (let i = 0; i < 5; i++) {
+    try {
+      execSync(`caddy stop`, { shell: true, stdio: `ignore` });
+    } catch (e) {
+      // "connection refused" means Caddy is already stopped — we're done.
+      break;
+    }
+  }
 }
 
 // When someone ctrl-c's a running instance, stop caddy (a few times) first.
