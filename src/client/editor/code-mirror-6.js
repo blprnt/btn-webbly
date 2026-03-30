@@ -11,11 +11,13 @@ import { html } from "@codemirror/lang-html";
 import { markdown } from "@codemirror/lang-markdown";
 import { javascript } from "@codemirror/lang-javascript";
 import { p5Completions } from "./p5-completions.js";
+import { nodeCompletions } from "./node-completions.js";
 // See https://github.com/orgs/codemirror/repositories?q=lang for more options
 
 import { Notice, createOneTimeNotice } from "../utils/notifications";
 
 const editable = !!document.body.dataset.projectMember;
+const completionProfile = document.body.dataset.completionProfile ?? `vanilla`;
 const INDENT_STRING = `  `;
 
 /**
@@ -132,7 +134,14 @@ export function getInitialState(editorEntry, doc) {
     md: markdown,
   }[fileExtension];
   if (syntax) extensions.push(syntax());
-  if (fileExtension === `js`) extensions.push(p5Completions);
+  if (fileExtension === `js`) {
+    if (completionProfile === `p5js` || completionProfile === `both`) {
+      extensions.push(p5Completions);
+    }
+    if (completionProfile === `nodejs` || completionProfile === `both`) {
+      extensions.push(nodeCompletions);
+    }
+  }
 
   // Then we have to manually add debounced content change
   // syncing, as a CM6 plugin, because CM6 has nothing built

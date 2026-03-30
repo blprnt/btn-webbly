@@ -29977,8 +29977,97 @@ var p5Completions = javascriptLanguage.data.of({
   autocomplete: p5CompletionSource
 });
 
+// src/client/editor/node-completions.js
+var NODE_GLOBALS = [
+  // Module system
+  { label: "require", type: "function", info: "require(module) \u2014 Imports a module. e.g. require('express')" },
+  { label: "module", type: "variable", info: "The current module object." },
+  { label: "exports", type: "variable", info: "Shorthand for module.exports. Attach values to export from this module." },
+  { label: "__dirname", type: "variable", info: "The directory path of the current module file." },
+  { label: "__filename", type: "variable", info: "The full file path of the current module file." },
+  // Process
+  { label: "process", type: "variable", info: "Information about the current Node.js process." },
+  { label: "process.env", type: "variable", info: "Object containing environment variables." },
+  { label: "process.argv", type: "variable", info: "Array of command-line arguments." },
+  { label: "process.exit", type: "function", info: "process.exit(code?) \u2014 Ends the process." },
+  { label: "process.cwd", type: "function", info: "process.cwd() \u2014 Returns the current working directory." },
+  { label: "process.on", type: "function", info: "process.on(event, listener) \u2014 Listens for process events." },
+  // Global objects
+  { label: "Buffer", type: "class", info: "Buffer \u2014 For working with binary data." },
+  { label: "Buffer.from", type: "function", info: "Buffer.from(data, encoding?) \u2014 Creates a buffer from a string or array." },
+  { label: "Buffer.alloc", type: "function", info: "Buffer.alloc(size) \u2014 Creates a zero-filled buffer of a given size." },
+  { label: "global", type: "variable", info: "The global object (equivalent to window in browsers)." },
+  // Timers (already in JS, but confirming Node supports them)
+  { label: "setTimeout", type: "function", info: "setTimeout(fn, ms) \u2014 Calls fn after ms milliseconds." },
+  { label: "setInterval", type: "function", info: "setInterval(fn, ms) \u2014 Calls fn every ms milliseconds." },
+  { label: "clearTimeout", type: "function", info: "clearTimeout(id) \u2014 Cancels a setTimeout." },
+  { label: "clearInterval", type: "function", info: "clearInterval(id) \u2014 Cancels a setInterval." },
+  { label: "setImmediate", type: "function", info: "setImmediate(fn) \u2014 Calls fn after I/O events in the current loop." },
+  // Common core module names (for use with require())
+  { label: "fs", type: "variable", info: "const fs = require('fs') \u2014 File system operations." },
+  { label: "path", type: "variable", info: "const path = require('path') \u2014 File path utilities." },
+  { label: "http", type: "variable", info: "const http = require('http') \u2014 HTTP server/client." },
+  { label: "https", type: "variable", info: "const https = require('https') \u2014 HTTPS server/client." },
+  { label: "url", type: "variable", info: "const url = require('url') \u2014 URL parsing." },
+  { label: "os", type: "variable", info: "const os = require('os') \u2014 Operating system info." },
+  { label: "crypto", type: "variable", info: "const crypto = require('crypto') \u2014 Cryptographic functions." },
+  { label: "events", type: "variable", info: "const events = require('events') \u2014 EventEmitter." },
+  { label: "stream", type: "variable", info: "const stream = require('stream') \u2014 Streaming interfaces." },
+  { label: "util", type: "variable", info: "const util = require('util') \u2014 Utility functions." },
+  { label: "querystring", type: "variable", info: "const querystring = require('querystring') \u2014 URL query string parsing." },
+  { label: "child_process", type: "variable", info: "const { exec, spawn } = require('child_process') \u2014 Run shell commands." },
+  // fs methods
+  { label: "fs.readFileSync", type: "function", info: "fs.readFileSync(path, encoding?) \u2014 Reads a file synchronously." },
+  { label: "fs.writeFileSync", type: "function", info: "fs.writeFileSync(path, data) \u2014 Writes a file synchronously." },
+  { label: "fs.existsSync", type: "function", info: "fs.existsSync(path) \u2014 Returns true if the path exists." },
+  { label: "fs.mkdirSync", type: "function", info: "fs.mkdirSync(path, options?) \u2014 Creates a directory." },
+  { label: "fs.readdirSync", type: "function", info: "fs.readdirSync(path) \u2014 Returns an array of filenames in a directory." },
+  { label: "fs.readFile", type: "function", info: "fs.readFile(path, encoding, callback) \u2014 Reads a file asynchronously." },
+  { label: "fs.writeFile", type: "function", info: "fs.writeFile(path, data, callback) \u2014 Writes a file asynchronously." },
+  { label: "fs.promises.readFile", type: "function", info: "fs.promises.readFile(path, encoding?) \u2014 Reads a file (Promise)." },
+  { label: "fs.promises.writeFile", type: "function", info: "fs.promises.writeFile(path, data) \u2014 Writes a file (Promise)." },
+  // path methods
+  { label: "path.join", type: "function", info: "path.join(...parts) \u2014 Joins path segments." },
+  { label: "path.resolve", type: "function", info: "path.resolve(...parts) \u2014 Resolves an absolute path." },
+  { label: "path.dirname", type: "function", info: "path.dirname(path) \u2014 Returns the directory of a path." },
+  { label: "path.basename", type: "function", info: "path.basename(path, ext?) \u2014 Returns the filename of a path." },
+  { label: "path.extname", type: "function", info: "path.extname(path) \u2014 Returns the file extension." },
+  // Express patterns
+  { label: "express", type: "function", info: "const express = require('express') \u2014 Web framework." },
+  { label: "app.get", type: "function", info: "app.get(path, handler) \u2014 Handles GET requests." },
+  { label: "app.post", type: "function", info: "app.post(path, handler) \u2014 Handles POST requests." },
+  { label: "app.put", type: "function", info: "app.put(path, handler) \u2014 Handles PUT requests." },
+  { label: "app.delete", type: "function", info: "app.delete(path, handler) \u2014 Handles DELETE requests." },
+  { label: "app.use", type: "function", info: "app.use(middleware) \u2014 Registers middleware." },
+  { label: "app.listen", type: "function", info: "app.listen(port, callback?) \u2014 Starts the server." },
+  { label: "req.body", type: "variable", info: "The parsed request body (requires body-parser or express.json())." },
+  { label: "req.params", type: "variable", info: "URL parameters from the route path (e.g. /users/:id \u2192 req.params.id)." },
+  { label: "req.query", type: "variable", info: "Parsed query string parameters." },
+  { label: "req.headers", type: "variable", info: "The request headers object." },
+  { label: "res.send", type: "function", info: "res.send(body) \u2014 Sends an HTTP response." },
+  { label: "res.json", type: "function", info: "res.json(obj) \u2014 Sends a JSON response." },
+  { label: "res.render", type: "function", info: "res.render(view, locals?) \u2014 Renders a template." },
+  { label: "res.redirect", type: "function", info: "res.redirect(url) \u2014 Redirects to another URL." },
+  { label: "res.status", type: "function", info: "res.status(code) \u2014 Sets the HTTP status code." },
+  // Async patterns
+  { label: "async", type: "keyword", info: "Marks a function as async, allowing use of await inside it." },
+  { label: "await", type: "keyword", info: "Pauses execution until a Promise resolves." },
+  { label: "Promise.all", type: "function", info: "Promise.all(promises) \u2014 Resolves when all promises resolve." },
+  { label: "Promise.resolve", type: "function", info: "Promise.resolve(value) \u2014 Returns a resolved Promise." },
+  { label: "Promise.reject", type: "function", info: "Promise.reject(reason) \u2014 Returns a rejected Promise." }
+];
+function nodeCompletionSource(context) {
+  const word = context.matchBefore(/[\w.]+/);
+  if (!word || word.from === word.to && !context.explicit) return null;
+  return { from: word.from, options: NODE_GLOBALS };
+}
+var nodeCompletions = javascriptLanguage.data.of({
+  autocomplete: nodeCompletionSource
+});
+
 // src/client/editor/code-mirror-6.js
 var editable2 = !!document.body.dataset.projectMember;
+var completionProfile = document.body.dataset.completionProfile ?? `vanilla`;
 var INDENT_STRING = `  `;
 function addTabHandling(extensions2) {
   let bypassTabs = false;
@@ -30054,7 +30143,14 @@ function getInitialState(editorEntry, doc2) {
     md: markdown
   }[fileExtension];
   if (syntax) extensions2.push(syntax());
-  if (fileExtension === `js`) extensions2.push(p5Completions);
+  if (fileExtension === `js`) {
+    if (completionProfile === `p5js` || completionProfile === `both`) {
+      extensions2.push(p5Completions);
+    }
+    if (completionProfile === `nodejs` || completionProfile === `both`) {
+      extensions2.push(nodeCompletions);
+    }
+  }
   extensions2.push(
     EditorView.updateListener.of((e2) => {
       if (e2.view !== editorEntry.view) return;

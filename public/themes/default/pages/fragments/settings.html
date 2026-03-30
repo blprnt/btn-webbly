@@ -37,6 +37,17 @@
           />
         </div>
 
+        <div>
+          <label>Autocomplete:</label>
+          <select name="completion_profile">
+            <option value="auto">Auto-detect</option>
+            <option value="p5js">p5.js</option>
+            <option value="nodejs">Node.js</option>
+            <option value="both">p5.js + Node.js</option>
+            <option value="vanilla">Off</option>
+          </select>
+        </div>
+
         <details>
           <summary>Advanced settings</summary>
           <div>
@@ -87,7 +98,7 @@
       const e = d.querySelectorAll(`[name="${name}"]`);
       if (e.length) {
         if (e.length === 1) {
-          e[0].value = settings[name];
+          e[0].value = settings[name] ?? e[0].value;
         } else {
           e.forEach((e) => {
             if (e.value === settings[name]) {

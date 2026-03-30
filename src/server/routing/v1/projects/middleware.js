@@ -57,6 +57,26 @@ import { addGitTracking } from "../../../git/git-utils.js";
 import { randomProjectName } from "../../../utils/word-lists.js";
 
 /**
+ * Scan a project directory to guess the best autocomplete profile.
+ * Returns 'p5js', 'nodejs', 'both', or 'vanilla'.
+ */
+function detectCompletionProfile(dir) {
+  const hasNode = existsSync(join(dir, `package.json`));
+  const hasP5 = globSync(`**/*.html`, { cwd: dir, ignore: `node_modules/**` })
+    .some((f) => {
+      try {
+        return /p5(\.min)?\.js/.test(readFileSync(join(dir, f), `utf8`));
+      } catch {
+        return false;
+      }
+    });
+  if (hasP5 && hasNode) return `both`;
+  if (hasP5) return `p5js`;
+  if (hasNode) return `nodejs`;
+  return `vanilla`;
+}
+
+/**
  * ...docs go here...
  */
 export async function checkProjectHealth(req, res, next) {
@@ -301,6 +321,11 @@ export async function loadProject(req, res, next) {
       }
     }
   }
+
+  const storedProfile = settings.completion_profile ?? `auto`;
+  res.locals.completionProfile = storedProfile === `auto` && !isStarter
+    ? detectCompletionProfile(dir)
+    : storedProfile === `auto` ? `p5js` : storedProfile;
 
   res.locals.starter = isStarter;
   res.locals.projectSettings = settings;
