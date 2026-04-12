@@ -136,8 +136,14 @@ export function updateCaddyFile(project, port, env = process.env) {
 \t\tdns ${TLS_DNS_PROVIDER} ${TLS_DNS_API_KEY}
 \t}`;
 
+    const socialRedirect = `
+\t@social {
+\t\theader_regexp User-Agent \`(Twitterbot|facebookexternalhit|LinkedInBot|Slackbot|WhatsApp|TelegramBot|Discordbot|Applebot|Googlebot-Image)\`
+\t}
+\tredir @social https://${env.WEB_EDITOR_HOSTNAME}/v1/projects/edit/${slug} 302`;
+
     const entry = `
-${host} {
+${host} {${socialRedirect}
 \treverse_proxy localhost:${port}${tls}
 \timport proxy_error_handling
 }
