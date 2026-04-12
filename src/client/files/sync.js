@@ -7,6 +7,7 @@ import {
 import { updatePreview } from "../preview/preview.js";
 import { API } from "../utils/api.js";
 import { Rewinder } from "./rewind.js";
+import { ErrorNotice, Notice } from "../utils/notifications.js";
 
 const { useWebsockets } = document.body.dataset;
 const saveStatus = document.getElementById(`save-status`);
@@ -55,7 +56,15 @@ export async function syncContent(projectSlug, fileEntry, forced = false) {
 
   // REST updates require a lot more work.
   else {
-    const response = await API.files.sync(projectSlug, path, patch);
+    let response;
+    try {
+      response = await API.files.sync(projectSlug, path, patch);
+    } catch (e) {
+      setSaveStatus(``);
+      new ErrorNotice(`Save failed — check your connection and try again.`);
+      editorEntry.debounce = false;
+      return;
+    }
     const responseHash = parseFloat(await response.text());
     if (responseHash === getFileSum(newContent)) {
       editorEntry.setContent(newContent);
@@ -71,6 +80,7 @@ export async function syncContent(projectSlug, fileEntry, forced = false) {
       // Or, much more likely, the user's content has become desynced
       // somehow and we resync it.
       if (document.body.dataset.projectMember) {
+        new Notice(`Content out of sync — refreshing from server.`, 4000);
         editorEntry.setContent(await fetchFileContents(projectSlug, path));
       }
       editorEntry.contentReset = true;

@@ -8,7 +8,8 @@ const preview = document.getElementById(`preview`);
 const { projectSlug } = document.body.dataset;
 
 let failures = 0;
-let first_time_load = 0;
+let containerReady = false;
+let updateInProgress = false;
 
 let refresh = true;
 
@@ -21,60 +22,78 @@ if (pause) {
 }
 
 /**
- * update the <graphics-element> based on the current file content.
+ * Poll until the container is ready, then resolve.
+ * Sets containerReady = true on success.
  */
-export async function updatePreview() {
-  if (!refresh) return;
-
-  const iframe = preview.querySelector(`iframe`);
-  const newFrame = document.createElement(`iframe`);
-
-  if (first_time_load++ < 10) {
-    // console.log(`checking container for ready`);
+async function waitForContainer() {
+  while (true) {
     const status = await API.projects.health(projectSlug);
     if (status === `failed`) {
       preview.classList.remove(`loading`);
-      // There's only so many times we'll try a failure reload.
       if (failures < 3) {
         failures++;
-        return setTimeout(updatePreview, 1000);
+        await new Promise((r) => setTimeout(r, 1000));
+        continue;
       }
-      return new ErrorNotice(`Project failed to start...`);
-    } else if (status === `not running` || status === `wait`) {
-      preview.classList.add(`loading`);
-      if (first_time_load < 10) {
-        return setTimeout(updatePreview, 1000);
-      } else {
-        preview.classList.remove(`loading`);
-        return console.log(`this project failed to start in a timely manner.`);
-      }
+      new ErrorNotice(`Project failed to start...`);
+      return false;
     }
+    if (status === `not running` || status === `wait`) {
+      preview.classList.add(`loading`);
+      await new Promise((r) => setTimeout(r, 1000));
+      continue;
+    }
+    // Container is running
+    containerReady = true;
+    preview.classList.remove(`loading`);
+    return true;
   }
-  preview.classList.remove(`loading`);
+}
 
-  newFrame.onerror = () => {
-    console.log(`what?`, e);
-  };
+/**
+ * update the preview iframe based on the current file content.
+ */
+export async function updatePreview() {
+  if (!refresh) return;
+  if (updateInProgress) return;
+  updateInProgress = true;
 
-  newFrame.onload = () => {
-    setTimeout(() => (newFrame.style.opacity = 1), 250);
-    setTimeout(() => iframe.remove(), 500);
-  };
+  try {
+    if (!containerReady) {
+      const ready = await waitForContainer();
+      if (!ready) return;
+    }
 
-  newFrame.style.opacity = 0;
-  let src = iframe.dataset.src;
-  src = src.replace(/\?v=\d+/, ``);
-  src += `?v=${Date.now()}`;
-  newFrame.dataset.src = src;
-  newFrame.dataset.projectName = iframe.dataset.projectName;
-  newFrame.dataset.projectSlug = iframe.dataset.projectSlug;
+    const iframe = preview.querySelector(`iframe`);
+    const newFrame = document.createElement(`iframe`);
 
-  // console.log(`using ${src}`);
-  preview.append(newFrame);
-  setTimeout(() => (newFrame.src = src), 100);
+    newFrame.onerror = (e) => {
+      console.log(`iframe error`, e);
+    };
+
+    newFrame.onload = () => {
+      setTimeout(() => (newFrame.style.opacity = 1), 250);
+      setTimeout(() => iframe.remove(), 500);
+    };
+
+    newFrame.style.opacity = 0;
+    let src = iframe.dataset.src;
+    src = src.replace(/\?v=\d+/, ``);
+    src += `?v=${Date.now()}`;
+    newFrame.dataset.src = src;
+    newFrame.dataset.projectName = iframe.dataset.projectName;
+    newFrame.dataset.projectSlug = iframe.dataset.projectSlug;
+
+    preview.append(newFrame);
+    setTimeout(() => (newFrame.src = src), 100);
+  } finally {
+    updateInProgress = false;
+  }
 }
 
 restart?.addEventListener(`click`, async () => {
+  containerReady = false;
+  failures = 0;
   preview.classList.add(`restarting`);
   await API.projects.restart(projectSlug);
   setTimeout(() => {

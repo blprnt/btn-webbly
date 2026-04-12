@@ -3,8 +3,10 @@ import { setupView } from "./code-mirror-6.js";
 import {
   SERVER_LOG_TAB_NAME,
   fetchFileContents,
+  updateViewMaintainScroll,
   create,
 } from "../utils/utils.js";
+import { applyPatch } from "/vendor/diff.js";
 import { getViewType, verifyViewType } from "../files/content-types.js";
 import { syncContent } from "../files/sync.js";
 import { ErrorNotice, Notice } from "../utils/notifications.js";
@@ -315,7 +317,7 @@ export class EditorEntry {
     const { type, update, ours } = evt.detail;
     if (type !== `diff`) return;
     if (!ours) {
-      const oldContent = entry.content;
+      const oldContent = this.content;
       this.setContent(applyPatch(oldContent, update));
       updateViewMaintainScroll(this);
     }
