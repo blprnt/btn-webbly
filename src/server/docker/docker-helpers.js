@@ -42,6 +42,8 @@ export function checkContainerHealth(project, slug = project.slug) {
     scheduleScreenShot(project);
     return `ready`;
   }
+  // Container has a port binding but isn't healthy yet — still starting up.
+  return `wait`;
 }
 
 /**
@@ -207,10 +209,26 @@ export async function restartContainer(project, rebuild = false) {
   console.log(`...done!`);
 }
 
+// Prevent concurrent runContainer calls for the same slug from racing.
+// Maps slug → Promise so subsequent callers await the in-flight run.
+const inFlightContainers = new Map();
+
 /**
  * ...docs go here...
  */
-export async function runContainer(project, slug = project.slug) {
+export function runContainer(project, slug = project.slug) {
+  if (inFlightContainers.has(slug)) {
+    console.log(`container start already in progress for ${slug}, waiting`);
+    return inFlightContainers.get(slug);
+  }
+  const promise = _runContainer(project, slug).finally(() => {
+    inFlightContainers.delete(slug);
+  });
+  inFlightContainers.set(slug, promise);
+  return promise;
+}
+
+async function _runContainer(project, slug = project.slug) {
   if (BYPASS_DOCKER) {
     if (project.settings?.app_type === `static`) {
       runStaticServer(project);
@@ -236,9 +254,11 @@ export async function runContainer(project, slug = project.slug) {
     console.log(`- Building image`);
     try {
       const build = `${DOCKER} build --tag ${slug} --no-cache .`;
-      execSync(build);
+      const output = execSync(build, { stdio: `pipe` }).toString();
+      console.log(`- Build output for ${slug}:\n${output}`);
     } catch (e) {
-      return console.error(e);
+      console.error(`- Build failed for ${slug}:`, e.stderr?.toString() || e.message);
+      return `failed`;
     }
   }
 
