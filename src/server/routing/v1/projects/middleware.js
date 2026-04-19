@@ -94,7 +94,20 @@ export async function checkProjectHealth(req, res, next) {
       res.locals.healthStatus = `failed`;
     }
   } else {
-    res.locals.healthStatus = checkContainerHealth(project);
+    // First check Docker's own healthcheck status for definitive states.
+    const dockerStatus = checkContainerHealth(project);
+    if (dockerStatus === `ready` || dockerStatus === `failed` || dockerStatus === `not running`) {
+      res.locals.healthStatus = dockerStatus;
+    } else {
+      // Docker says "wait" or "starting" — actively probe the port so we
+      // don't have to wait for Docker's 5-minute healthcheck interval.
+      try {
+        await fetch(`http://localhost:${binding.port}`, { signal: AbortSignal.timeout(2000) });
+        res.locals.healthStatus = `ready`;
+      } catch (e) {
+        res.locals.healthStatus = `wait`;
+      }
+    }
   }
   next();
 }
