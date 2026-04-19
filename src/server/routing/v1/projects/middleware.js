@@ -99,10 +99,16 @@ export async function checkProjectHealth(req, res, next) {
     if (dockerStatus === `failed`) {
       res.locals.healthStatus = `failed`;
     } else if (dockerStatus === `not running`) {
-      // Container exited (e.g. npm install/start failed) — restart it.
-      console.log(`[health] ${project.slug} container not running, restarting`);
-      runContainer(project);
-      res.locals.healthStatus = `wait`;
+      // Container exited — restart it, but only up to 3 times before giving up.
+      binding.failedRestarts = (binding.failedRestarts ?? 0) + 1;
+      if (binding.failedRestarts > 3) {
+        console.log(`[health] ${project.slug} failed to start ${binding.failedRestarts} times, giving up`);
+        res.locals.healthStatus = `failed`;
+      } else {
+        console.log(`[health] ${project.slug} container not running, restarting (attempt ${binding.failedRestarts})`);
+        runContainer(project);
+        res.locals.healthStatus = `wait`;
+      }
     } else if (dockerStatus === `ready`) {
       res.locals.healthStatus = `ready`;
     } else {
