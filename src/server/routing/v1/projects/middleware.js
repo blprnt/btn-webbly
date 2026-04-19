@@ -96,8 +96,15 @@ export async function checkProjectHealth(req, res, next) {
   } else {
     // First check Docker's own healthcheck status for definitive states.
     const dockerStatus = checkContainerHealth(project);
-    if (dockerStatus === `ready` || dockerStatus === `failed` || dockerStatus === `not running`) {
-      res.locals.healthStatus = dockerStatus;
+    if (dockerStatus === `failed`) {
+      res.locals.healthStatus = `failed`;
+    } else if (dockerStatus === `not running`) {
+      // Container exited (e.g. npm install/start failed) — restart it.
+      console.log(`[health] ${project.slug} container not running, restarting`);
+      runContainer(project);
+      res.locals.healthStatus = `wait`;
+    } else if (dockerStatus === `ready`) {
+      res.locals.healthStatus = `ready`;
     } else {
       // Docker says "wait" or "starting" — actively probe the port so we
       // don't have to wait for Docker's 5-minute healthcheck interval.
