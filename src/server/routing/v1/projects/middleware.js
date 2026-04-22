@@ -28,6 +28,7 @@ import {
   checkContainerHealth,
   deleteContainerAndImage,
   getContainerLogs,
+  inFlightContainers,
   renameContainer,
   restartContainer,
   runContainer,
@@ -83,7 +84,8 @@ export async function checkProjectHealth(req, res, next) {
   const { project } = res.locals.lookups;
   const binding = portBindings[project.slug];
   if (!binding) {
-    res.locals.healthStatus = `failed`;
+    // If a container build/start is in progress, tell the client to wait.
+    res.locals.healthStatus = inFlightContainers.has(project.slug) ? `wait` : `failed`;
     return next();
   }
   if (binding.serverProcess) {

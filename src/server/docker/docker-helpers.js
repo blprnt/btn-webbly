@@ -211,7 +211,8 @@ export async function restartContainer(project, rebuild = false) {
 
 // Prevent concurrent runContainer calls for the same slug from racing.
 // Maps slug → Promise so subsequent callers await the in-flight run.
-const inFlightContainers = new Map();
+// Exported so health checks can return 'wait' instead of 'failed' during builds.
+export const inFlightContainers = new Map();
 
 /**
  * ...docs go here...
