@@ -1,4 +1,5 @@
-import { sep } from "node:path";
+import { sep, join } from "node:path";
+import { existsSync } from "node:fs";
 import {
   BYPASS_DOCKER,
   CONTENT_BASE,
@@ -20,6 +21,32 @@ import {
 import { scheduleScreenShot } from "../screenshots/screenshot.js";
 
 const { WEB_EDITOR_HOSTNAME } = process.env;
+
+// Debounce timers for auto-restart on file save (per slug)
+const RESTART_TIMEOUTS = {};
+const RESTART_DEBOUNCE_MS = 2000;
+
+/**
+ * Schedule a container restart after a short debounce.
+ * Called on every file save for non-static Docker projects so the
+ * Node.js server picks up the new code without a manual restart.
+ */
+export function scheduleContainerRestart(project) {
+  if (BYPASS_DOCKER) return;
+  if (project.settings?.app_type === `static`) return;
+
+  const { slug } = project;
+  clearTimeout(RESTART_TIMEOUTS[slug]);
+  RESTART_TIMEOUTS[slug] = setTimeout(async () => {
+    delete RESTART_TIMEOUTS[slug];
+    console.log(`[autosave] restarting container for ${slug}`);
+    try {
+      await restartContainer(project);
+    } catch (e) {
+      console.error(`[autosave] restart failed for ${slug}:`, e.message);
+    }
+  }, RESTART_DEBOUNCE_MS);
+}
 
 /**
  * ...docs go here...
@@ -274,8 +301,14 @@ async function _runContainer(project, slug = project.slug) {
   if (!foundProject()) {
     console.log(`- Starting container on port ${port}`);
 
-    const runFlags = `--detach --rm --stop-timeout 0 --name ${slug}`;
     const base = isStarter ? STARTER_BASE : CONTENT_BASE;
+    const runScript = join(base, slug, `.container`, `run.sh`);
+    if (!existsSync(runScript)) {
+      console.error(`- ${slug} has no .container/run.sh — cannot start container`);
+      return `failed`;
+    }
+
+    const runFlags = `--detach --rm --stop-timeout 0 --name ${slug}`;
     const bindMount = `--mount type=bind,src=.${sep}${base}${sep}${slug},dst=/app`;
     const envVars = Object.entries({
       PORT: `8000`,

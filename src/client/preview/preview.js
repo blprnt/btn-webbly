@@ -35,7 +35,11 @@ async function waitForContainer() {
         await new Promise((r) => setTimeout(r, 1000));
         continue;
       }
-      new ErrorNotice(`Project failed to start...`);
+      new ErrorNotice(`Project failed to start...`, Infinity, () => {
+        // Closing the notice resets state so the next save/action retries.
+        failures = 0;
+        containerReady = false;
+      });
       return false;
     }
     if (status === `not running` || status === `wait`) {

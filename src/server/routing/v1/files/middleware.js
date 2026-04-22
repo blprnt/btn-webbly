@@ -31,6 +31,7 @@ import {
 } from "../../../../helpers.js";
 import * as GitUtils from "../../../git/git-utils.js";
 const { createRewindPoint } = GitUtils;
+import { scheduleContainerRestart } from "../../../docker/docker-helpers.js";
 
 const contentDir = join(ROOT_DIR, CONTENT_DIR);
 const starterDir = join(ROOT_DIR, STARTER_DIR);
@@ -240,6 +241,7 @@ export async function patchFile(req, res, next) {
   if (patched) writeFileSync(fullPath, patched);
   res.locals.fileHash = `${getFileSum(project.slug, fullPath, true)}`;
   createRewindPoint(project);
+  scheduleContainerRestart(project);
   next();
 }
 

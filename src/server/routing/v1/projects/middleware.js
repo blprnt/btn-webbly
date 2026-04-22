@@ -329,7 +329,8 @@ export async function loadProject(req, res, next) {
     const staticType = app_type === null || app_type === `static`;
     const inEditor = req.originalUrl?.startsWith(`/v1/projects/edit/`);
     const mayEdit = isStarter ? false : getAccessFor(user, project) >= MEMBER;
-    const noStatic = inEditor && user && mayEdit;
+    // Only promote to Docker when editing if the project isn't explicitly static.
+    const noStatic = !staticType && inEditor && user && mayEdit;
     if (!staticType || noStatic) {
       stopStaticServer(project);
       await runContainer(project);

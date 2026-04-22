@@ -12,6 +12,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { createRewindPoint, getFileHistory } from "../../../git/git-utils.js";
+import { scheduleContainerRestart } from "../../../docker/docker-helpers.js";
 import { FILE_TREE_PREFIX } from "custom-file-tree";
 
 export { FILE_TREE_PREFIX };
@@ -181,6 +182,7 @@ export class OTHandler {
         try {
           writeFileSync(fullPath, newContent.toString());
           createRewindPoint(this.project);
+          scheduleContainerRestart(this.project);
           return true;
         } catch (e) {
           exception = e;
