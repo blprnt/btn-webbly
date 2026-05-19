@@ -54,7 +54,7 @@ export function scheduleContainerRestart(project) {
 export function checkContainerHealth(project, slug = project.slug) {
   if (BYPASS_DOCKER) return `not running`;
 
-  const check = `${DOCKER} ps --no-trunc -f name=^/${slug}$`;
+  const check = `${DOCKER} ps -a --no-trunc -f name=^/${slug}$`;
   const result = execSync(check).toString().trim();
   if (result.includes(`Exited`)) {
     return `failed`;
@@ -292,9 +292,14 @@ async function _runContainer(project, slug = project.slug) {
 
   // We know there's an image now, but: is it running as container?
 
-  // FIXME: TODO: check if `docker ps -a` has a dead container that we need to cleanup. https://github.com/Pomax/make-webbly-things/issues/109
+  // Clean up any exited container with the same name before starting a new one.
   console.log(`- Checking for running container`);
-  const check = `${DOCKER} ps --no-trunc -f name=^/${slug}$`;
+  try {
+    execSync(`${DOCKER} container rm ${slug}`, { stdio: `ignore` });
+  } catch (e) {
+    // Not there, that's fine.
+  }
+  const check = `${DOCKER} ps -a --no-trunc -f name=^/${slug}$`;
   result = execSync(check).toString().trim();
 
   // There is no running container: start one
@@ -308,7 +313,7 @@ async function _runContainer(project, slug = project.slug) {
       return `failed`;
     }
 
-    const runFlags = `--detach --rm --stop-timeout 0 --name ${slug}`;
+    const runFlags = `--detach --stop-timeout 0 --name ${slug}`;
     const bindMount = `--mount type=bind,src=.${sep}${base}${sep}${slug},dst=/app`;
     const envVars = Object.entries({
       PORT: `8000`,
@@ -335,7 +340,8 @@ async function _runContainer(project, slug = project.slug) {
       );
       return;
     }
-    result = execSync(check).toString().trim();
+    // Use running-only check here — we want the live port, not a dead container
+    result = execSync(`${DOCKER} ps --no-trunc -f name=^/${slug}$`).toString().trim();
     const runningPort = result.match(/0.0.0.0:(\d+)->/m)?.[1];
     if (runningPort) {
       console.log(`- found port from container: ${runningPort}`);
