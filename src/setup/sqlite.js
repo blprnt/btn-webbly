@@ -45,6 +45,8 @@ export async function setupSqlite() {
         root_dir,
       } = settings;
 
+      if (!starterName) throw new Error(`Starter project "${name}" is missing a "name" field in settings.json`);
+
       writeFileSync(runsh, run_script);
 
       // Create or update the project record:
