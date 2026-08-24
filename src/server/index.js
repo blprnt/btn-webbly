@@ -1,6 +1,7 @@
 // Load our server dependencies...
 import express from "express";
 import { join } from "node:path";
+import { execSync } from "node:child_process";
 import { setDefaultAspects, ROOT_DIR } from "../helpers.js";
 import { setupRoutes } from "./routing/index.js";
 import { watchForRebuild } from "./watcher.js";
@@ -10,7 +11,20 @@ import { scheduleContainerCheck } from "./docker/sleep-check.js";
 import { applyMigrations } from "./database/utils.js";
 
 const PORT = process.env.PORT ?? 8000;
-const { WEB_EDITOR_HOSTNAME } = process.env;
+const { WEB_EDITOR_HOSTNAME, DOCKER_EXECUTABLE = `docker`, WEB_EDITOR_IMAGE_NAME = `local-base-image` } = process.env;
+
+// Ensure the Docker base image exists every time the server starts.
+// Without it, no project containers can build. This recovers from
+// docker system prune or a fresh server without needing to re-run setup.js.
+(function ensureBaseImage() {
+  try {
+    execSync(`${DOCKER_EXECUTABLE} image inspect ${WEB_EDITOR_IMAGE_NAME}`, { stdio: `ignore` });
+  } catch {
+    console.log(`[startup] Base image "${WEB_EDITOR_IMAGE_NAME}" not found — building now...`);
+    execSync(`${DOCKER_EXECUTABLE} build -t ${WEB_EDITOR_IMAGE_NAME} src/server/docker/`, { stdio: `inherit` });
+    console.log(`[startup] Base image built.`);
+  }
+})();
 
 // Prevent unhandled promise rejections from crashing the server.
 // One broken project (e.g. missing Docker image) should not take down everything.
