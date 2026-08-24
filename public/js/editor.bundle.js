@@ -56,19 +56,19 @@ var API = {
 var SERVER_LOG_TAB_NAME = `Server Log`;
 var { min } = Math;
 function create(tag, attributes = {}, evts = {}) {
-  const e2 = document.createElement(tag);
+  const e = document.createElement(tag);
   Object.entries(attributes).forEach(([k, v]) => {
     if (k === `textContent`) {
-      e2.textContent = attributes.textContent;
+      e.textContent = attributes.textContent;
       return;
     }
     if (k.startsWith(`data`)) {
       k = k.replace(/([A-Z])/g, (_, l) => `-${l.toLowerCase()}`);
     }
-    e2.setAttribute(k, v);
+    e.setAttribute(k, v);
   });
-  Object.entries(evts).forEach(([t2, fn]) => e2.addEventListener(t2, fn));
-  return e2;
+  Object.entries(evts).forEach(([t2, fn]) => e.addEventListener(t2, fn));
+  return e;
 }
 async function fetchFileContents(projectSlug6, fileName, type = `text/plain`) {
   const response = await API.files.get(projectSlug6, fileName);
@@ -79,13 +79,13 @@ async function fetchFileContents(projectSlug6, fileName, type = `text/plain`) {
 }
 function getFileSum(data3) {
   const enc = new TextEncoder();
-  return enc.encode(data3).reduce((t2, e2) => t2 + e2, 0);
+  return enc.encode(data3).reduce((t2, e) => t2 + e, 0);
 }
 function listEquals(a1, a2) {
   if (a1.length !== a2.length) return false;
   return a1.every((v, i) => a2[i] === v);
 }
-async function updateViewMaintainScroll2(editorEntry, content2 = editorEntry.content, editable3 = editorEntry.editable) {
+async function updateViewMaintainScroll(editorEntry, content2 = editorEntry.content, editable3 = editorEntry.editable) {
   const { view } = editorEntry;
   if (!view) return;
   editorEntry.setEditable(editable3);
@@ -254,7 +254,8 @@ var newtab = document.querySelector(`#preview-buttons .newtab`);
 var preview = document.getElementById(`preview`);
 var { projectSlug } = document.body.dataset;
 var failures = 0;
-var first_time_load = 0;
+var containerReady = false;
+var updateInProgress = false;
 var refresh = true;
 if (pause) {
   pause.addEventListener(`click`, () => {
@@ -263,48 +264,66 @@ if (pause) {
     if (refresh) updatePreview();
   });
 }
-async function updatePreview() {
-  if (!refresh) return;
-  const iframe = preview.querySelector(`iframe`);
-  const newFrame = document.createElement(`iframe`);
-  if (first_time_load++ < 10) {
+async function waitForContainer() {
+  while (true) {
     const status = await API.projects.health(projectSlug);
     if (status === `failed`) {
       preview.classList.remove(`loading`);
       if (failures < 3) {
         failures++;
-        return setTimeout(updatePreview, 1e3);
+        await new Promise((r) => setTimeout(r, 1e3));
+        continue;
       }
-      return new ErrorNotice(`Project failed to start...`);
-    } else if (status === `not running` || status === `wait`) {
-      preview.classList.add(`loading`);
-      if (first_time_load < 10) {
-        return setTimeout(updatePreview, 1e3);
-      } else {
-        preview.classList.remove(`loading`);
-        return console.log(`this project failed to start in a timely manner.`);
-      }
+      new ErrorNotice(`Project failed to start...`, Infinity, () => {
+        failures = 0;
+        containerReady = false;
+      });
+      return false;
     }
+    if (status === `not running` || status === `wait`) {
+      preview.classList.add(`loading`);
+      await new Promise((r) => setTimeout(r, 1e3));
+      continue;
+    }
+    containerReady = true;
+    preview.classList.remove(`loading`);
+    return true;
   }
-  preview.classList.remove(`loading`);
-  newFrame.onerror = () => {
-    console.log(`what?`, e);
-  };
-  newFrame.onload = () => {
-    setTimeout(() => newFrame.style.opacity = 1, 250);
-    setTimeout(() => iframe.remove(), 500);
-  };
-  newFrame.style.opacity = 0;
-  let src = iframe.dataset.src;
-  src = src.replace(/\?v=\d+/, ``);
-  src += `?v=${Date.now()}`;
-  newFrame.dataset.src = src;
-  newFrame.dataset.projectName = iframe.dataset.projectName;
-  newFrame.dataset.projectSlug = iframe.dataset.projectSlug;
-  preview.append(newFrame);
-  setTimeout(() => newFrame.src = src, 100);
+}
+async function updatePreview() {
+  if (!refresh) return;
+  if (updateInProgress) return;
+  updateInProgress = true;
+  try {
+    if (!containerReady) {
+      const ready = await waitForContainer();
+      if (!ready) return;
+    }
+    const iframe = preview.querySelector(`iframe`);
+    const newFrame = document.createElement(`iframe`);
+    newFrame.onerror = (e) => {
+      console.log(`iframe error`, e);
+    };
+    newFrame.onload = () => {
+      setTimeout(() => newFrame.style.opacity = 1, 250);
+      setTimeout(() => iframe.remove(), 500);
+    };
+    newFrame.style.opacity = 0;
+    let src = iframe.dataset.src;
+    src = src.replace(/\?v=\d+/, ``);
+    src += `?v=${Date.now()}`;
+    newFrame.dataset.src = src;
+    newFrame.dataset.projectName = iframe.dataset.projectName;
+    newFrame.dataset.projectSlug = iframe.dataset.projectSlug;
+    preview.append(newFrame);
+    setTimeout(() => newFrame.src = src, 100);
+  } finally {
+    updateInProgress = false;
+  }
 }
 restart?.addEventListener(`click`, async () => {
+  containerReady = false;
+  failures = 0;
   preview.classList.add(`restarting`);
   await API.projects.restart(projectSlug);
   setTimeout(() => {
@@ -1351,7 +1370,7 @@ var ChangeSet = class _ChangeSet extends ChangeDesc {
       let part = json[i];
       if (typeof part == "number") {
         sections.push(part, -1);
-      } else if (!Array.isArray(part) || typeof part[0] != "number" || part.some((e2, i2) => i2 && typeof e2 != "string")) {
+      } else if (!Array.isArray(part) || typeof part[0] != "number" || part.some((e, i2) => i2 && typeof e != "string")) {
         throw new RangeError("Invalid JSON representation of ChangeSet");
       } else if (part.length == 1) {
         sections.push(part[0], 0);
@@ -1860,7 +1879,7 @@ var Facet = class _Facet {
   }
 };
 function sameArray(a, b) {
-  return a == b || a.length == b.length && a.every((e2, i) => e2 === b[i]);
+  return a == b || a.length == b.length && a.every((e, i) => e === b[i]);
 }
 var FacetProvider = class {
   constructor(dependencies, facet, type, value) {
@@ -2206,8 +2225,8 @@ function flatten(extension, compartments, newCompartments) {
     }
     seen.set(ext, prec2);
     if (Array.isArray(ext)) {
-      for (let e2 of ext)
-        inner(e2, prec2);
+      for (let e of ext)
+        inner(e, prec2);
     } else if (ext instanceof CompartmentInstance) {
       if (newCompartments.has(ext.compartment))
         throw new RangeError(`Duplicate use of compartment in extensions`);
@@ -2437,8 +2456,8 @@ var Transaction = class _Transaction {
   `"select.pointer"` will match it.
   */
   isUserEvent(event) {
-    let e2 = this.annotation(_Transaction.userEvent);
-    return !!(e2 && (e2 == event || e2.length > event.length && e2.slice(0, event.length) == event && e2[event.length] == "."));
+    let e = this.annotation(_Transaction.userEvent);
+    return !!(e && (e == event || e.length > event.length && e.slice(0, event.length) == event && e[event.length] == "."));
   }
 };
 Transaction.time = /* @__PURE__ */ Annotation.define();
@@ -3010,7 +3029,7 @@ var Chunk = class _Chunk {
     }
   }
   between(offset, from, to, f) {
-    for (let i = this.findIndex(from, -1e9, true), e2 = this.findIndex(to, 1e9, false, i); i < e2; i++)
+    for (let i = this.findIndex(from, -1e9, true), e = this.findIndex(to, 1e9, false, i); i < e; i++)
       if (f(this.from[i] + offset, this.to[i] + offset, this.value[i]) === false)
         return false;
   }
@@ -3693,7 +3712,7 @@ function sameValues(a, b) {
   return true;
 }
 function remove(array, index) {
-  for (let i = index, e2 = array.length - 1; i < e2; i++)
+  for (let i = index, e = array.length - 1; i < e; i++)
     array[i] = array[i + 1];
   array.pop();
 }
@@ -6311,8 +6330,8 @@ var PluginInstance = class {
       if (this.spec) {
         try {
           this.value = this.spec.plugin.create(view, this.spec.arg);
-        } catch (e2) {
-          logException(view.state, e2, "CodeMirror plugin crashed");
+        } catch (e) {
+          logException(view.state, e, "CodeMirror plugin crashed");
           this.deactivate();
         }
       }
@@ -6322,8 +6341,8 @@ var PluginInstance = class {
       if (this.value.update) {
         try {
           this.value.update(update);
-        } catch (e2) {
-          logException(update.state, e2, "CodeMirror plugin crashed");
+        } catch (e) {
+          logException(update.state, e, "CodeMirror plugin crashed");
           if (this.value.destroy)
             try {
               this.value.destroy();
@@ -6340,8 +6359,8 @@ var PluginInstance = class {
     if ((_a2 = this.value) === null || _a2 === void 0 ? void 0 : _a2.destroy) {
       try {
         this.value.destroy();
-      } catch (e2) {
-        logException(view.state, e2, "CodeMirror plugin crashed");
+      } catch (e) {
+        logException(view.state, e, "CodeMirror plugin crashed");
       }
     }
   }
@@ -7006,8 +7025,8 @@ var DocView = class extends ContentView {
       try {
         if (handler(this.view, target.range, target))
           return true;
-      } catch (e2) {
-        logException(this.view.state, e2, "scroll handler");
+      } catch (e) {
+        logException(this.view.state, e, "scroll handler");
       }
     }
     let { range } = target;
@@ -7961,8 +7980,8 @@ function bindHandler(plugin, handler) {
   return (view, event) => {
     try {
       return handler.call(plugin, event, view);
-    } catch (e2) {
-      logException(view.state, e2);
+    } catch (e) {
+      logException(view.state, e);
     }
   };
 }
@@ -8205,7 +8224,7 @@ handlers.keydown = (view, event) => {
     view.inputState.tabFocusMode = Date.now() + 2e3;
   return false;
 };
-observers.touchstart = (view, e2) => {
+observers.touchstart = (view, e) => {
   view.inputState.lastTouchTime = Date.now();
   view.inputState.setSelectionOrigin("select.pointer");
 };
@@ -10267,17 +10286,17 @@ var DOMObserver = class {
     this.listenForScroll();
     this.readSelectionRange();
   }
-  onScrollChanged(e2) {
-    this.view.inputState.runHandlers("scroll", e2);
+  onScrollChanged(e) {
+    this.view.inputState.runHandlers("scroll", e);
     if (this.intersecting)
       this.view.measure();
   }
-  onScroll(e2) {
+  onScroll(e) {
     if (this.intersecting)
       this.flush(false);
     if (this.editContext)
       this.view.requestMeasure(this.editContext.measureReq);
-    this.onScrollChanged(e2);
+    this.onScrollChanged(e);
   }
   onResize() {
     if (this.resizeTimeout < 0)
@@ -10644,46 +10663,46 @@ var EditContextManager = class {
       selectionStart: this.toContextPos(Math.max(this.from, Math.min(this.to, view.state.selection.main.anchor))),
       selectionEnd: this.toContextPos(view.state.selection.main.head)
     });
-    this.handlers.textupdate = (e2) => {
+    this.handlers.textupdate = (e) => {
       let main = view.state.selection.main, { anchor, head } = main;
-      let from = this.toEditorPos(e2.updateRangeStart), to = this.toEditorPos(e2.updateRangeEnd);
+      let from = this.toEditorPos(e.updateRangeStart), to = this.toEditorPos(e.updateRangeEnd);
       if (view.inputState.composing >= 0 && !this.composing)
-        this.composing = { contextBase: e2.updateRangeStart, editorBase: from, drifted: false };
-      let change = { from, to, insert: Text.of(e2.text.split("\n")) };
+        this.composing = { contextBase: e.updateRangeStart, editorBase: from, drifted: false };
+      let change = { from, to, insert: Text.of(e.text.split("\n")) };
       if (change.from == this.from && anchor < this.from)
         change.from = anchor;
       else if (change.to == this.to && anchor > this.to)
         change.to = anchor;
       if (change.from == change.to && !change.insert.length) {
-        let newSel = EditorSelection.single(this.toEditorPos(e2.selectionStart), this.toEditorPos(e2.selectionEnd));
+        let newSel = EditorSelection.single(this.toEditorPos(e.selectionStart), this.toEditorPos(e.selectionEnd));
         if (!newSel.main.eq(main))
           view.dispatch({ selection: newSel, userEvent: "select" });
         return;
       }
-      if ((browser.mac || browser.android) && change.from == head - 1 && /^\. ?$/.test(e2.text) && view.contentDOM.getAttribute("autocorrect") == "off")
-        change = { from, to, insert: Text.of([e2.text.replace(".", " ")]) };
+      if ((browser.mac || browser.android) && change.from == head - 1 && /^\. ?$/.test(e.text) && view.contentDOM.getAttribute("autocorrect") == "off")
+        change = { from, to, insert: Text.of([e.text.replace(".", " ")]) };
       this.pendingContextChange = change;
       if (!view.state.readOnly) {
         let newLen = this.to - this.from + (change.to - change.from + change.insert.length);
-        applyDOMChangeInner(view, change, EditorSelection.single(this.toEditorPos(e2.selectionStart, newLen), this.toEditorPos(e2.selectionEnd, newLen)));
+        applyDOMChangeInner(view, change, EditorSelection.single(this.toEditorPos(e.selectionStart, newLen), this.toEditorPos(e.selectionEnd, newLen)));
       }
       if (this.pendingContextChange) {
         this.revertPending(view.state);
         this.setSelection(view.state);
       }
     };
-    this.handlers.characterboundsupdate = (e2) => {
+    this.handlers.characterboundsupdate = (e) => {
       let rects = [], prev = null;
-      for (let i = this.toEditorPos(e2.rangeStart), end = this.toEditorPos(e2.rangeEnd); i < end; i++) {
+      for (let i = this.toEditorPos(e.rangeStart), end = this.toEditorPos(e.rangeEnd); i < end; i++) {
         let rect = view.coordsForChar(i);
         prev = rect && new DOMRect(rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top) || prev || new DOMRect();
         rects.push(prev);
       }
-      context.updateCharacterBounds(e2.rangeStart, rects);
+      context.updateCharacterBounds(e.rangeStart, rects);
     };
-    this.handlers.textformatupdate = (e2) => {
+    this.handlers.textformatupdate = (e) => {
       let deco = [];
-      for (let format of e2.getTextFormats()) {
+      for (let format of e.getTextFormats()) {
         let lineStyle = format.underlineStyle, thickness = format.underlineThickness;
         if (lineStyle != "None" && thickness != "None") {
           let from = this.toEditorPos(format.rangeStart), to = this.toEditorPos(format.rangeEnd);
@@ -10991,9 +11010,9 @@ var EditorView = class _EditorView {
           let { main } = tr.state.selection;
           scrollTarget = new ScrollTarget(main.empty ? main : EditorSelection.cursor(main.head, main.head > main.anchor ? -1 : 1));
         }
-        for (let e2 of tr.effects)
-          if (e2.is(scrollIntoView))
-            scrollTarget = e2.value.clip(this.state);
+        for (let e of tr.effects)
+          if (e.is(scrollIntoView))
+            scrollTarget = e.value.clip(this.state);
       }
       this.viewState.update(update, scrollTarget);
       this.bidiCache = CachedOrder.update(this.bidiCache, update.changes);
@@ -11020,8 +11039,8 @@ var EditorView = class _EditorView {
       for (let listener of this.state.facet(updateListener)) {
         try {
           listener(update);
-        } catch (e2) {
-          logException(this.state, e2, "update listener");
+        } catch (e) {
+          logException(this.state, e, "update listener");
         }
       }
     if (dispatchFocus || domChange)
@@ -11105,8 +11124,8 @@ var EditorView = class _EditorView {
       if (val && val.docViewUpdate) {
         try {
           val.docViewUpdate(this);
-        } catch (e2) {
-          logException(this.state, e2, "doc view update listener");
+        } catch (e) {
+          logException(this.state, e, "doc view update listener");
         }
       }
     }
@@ -11159,8 +11178,8 @@ var EditorView = class _EditorView {
         let measured = measuring.map((m) => {
           try {
             return m.read(this);
-          } catch (e2) {
-            logException(this.state, e2);
+          } catch (e) {
+            logException(this.state, e);
             return BadMeasure;
           }
         });
@@ -11185,8 +11204,8 @@ var EditorView = class _EditorView {
               let m = measuring[i2];
               if (m.write)
                 m.write(measured[i2], this);
-            } catch (e2) {
-              logException(this.state, e2);
+            } catch (e) {
+              logException(this.state, e);
             }
           }
         if (redrawn)
@@ -11562,9 +11581,9 @@ var EditorView = class _EditorView {
     if (line.length > MaxBidiLine)
       return trivialOrder(line.length);
     let dir = this.textDirectionAt(line.from), isolates;
-    for (let entry2 of this.bidiCache) {
-      if (entry2.from == line.from && entry2.dir == dir && (entry2.fresh || isolatesEq(entry2.isolates, isolates = getIsolatedRanges(this, line))))
-        return entry2.order;
+    for (let entry of this.bidiCache) {
+      if (entry.from == line.from && entry.dir == dir && (entry.fresh || isolatesEq(entry.isolates, isolates = getIsolatedRanges(this, line))))
+        return entry.order;
     }
     if (!isolates)
       isolates = getIsolatedRanges(this, line);
@@ -11775,9 +11794,9 @@ var CachedOrder = class _CachedOrder {
       return cache2;
     let result = [], lastDir = cache2.length ? cache2[cache2.length - 1].dir : Direction.LTR;
     for (let i = Math.max(0, cache2.length - 10); i < cache2.length; i++) {
-      let entry2 = cache2[i];
-      if (entry2.dir == lastDir && !changes.touchesRange(entry2.from, entry2.to))
-        result.push(new _CachedOrder(changes.mapPos(entry2.from, 1), changes.mapPos(entry2.to, -1), entry2.dir, entry2.isolates, false, entry2.order));
+      let entry = cache2[i];
+      if (entry.dir == lastDir && !changes.touchesRange(entry.from, entry.to))
+        result.push(new _CachedOrder(changes.mapPos(entry.from, 1), changes.mapPos(entry.to, -1), entry.dir, entry.isolates, false, entry.order));
     }
     return result;
   }
@@ -12304,7 +12323,7 @@ var dropCursorPos = /* @__PURE__ */ StateField.define({
   update(pos, tr) {
     if (pos != null)
       pos = tr.changes.mapPos(pos);
-    return tr.effects.reduce((pos2, e2) => e2.is(setDropCursorPos) ? e2.value : pos2, pos);
+    return tr.effects.reduce((pos2, e) => e.is(setDropCursorPos) ? e.value : pos2, pos);
   }
 });
 var drawDropCursor = /* @__PURE__ */ ViewPlugin.fromClass(class {
@@ -12730,14 +12749,14 @@ function rectangleSelectionStyle(view, event) {
   };
 }
 function rectangularSelection(options) {
-  let filter = (options === null || options === void 0 ? void 0 : options.eventFilter) || ((e2) => e2.altKey && e2.button == 0);
+  let filter = (options === null || options === void 0 ? void 0 : options.eventFilter) || ((e) => e.altKey && e.button == 0);
   return EditorView.mouseSelectionStyle.of((view, event) => filter(event) ? rectangleSelectionStyle(view, event) : null);
 }
 var keys = {
-  Alt: [18, (e2) => !!e2.altKey],
-  Control: [17, (e2) => !!e2.ctrlKey],
-  Shift: [16, (e2) => !!e2.shiftKey],
-  Meta: [91, (e2) => !!e2.metaKey]
+  Alt: [18, (e) => !!e.altKey],
+  Control: [17, (e) => !!e.ctrlKey],
+  Shift: [16, (e) => !!e.shiftKey],
+  Meta: [91, (e) => !!e.metaKey]
 };
 var showCrosshair = { style: "cursor: crosshair" };
 function crosshairCursor(options = {}) {
@@ -12755,15 +12774,15 @@ function crosshairCursor(options = {}) {
     }
   }, {
     eventObservers: {
-      keydown(e2) {
-        this.set(e2.keyCode == code || getter(e2));
+      keydown(e) {
+        this.set(e.keyCode == code || getter(e));
       },
-      keyup(e2) {
-        if (e2.keyCode == code || !getter(e2))
+      keyup(e) {
+        if (e.keyCode == code || !getter(e))
           this.set(false);
       },
-      mousemove(e2) {
-        this.set(getter(e2));
+      mousemove(e) {
+        this.set(getter(e));
       }
     }
   });
@@ -13304,7 +13323,7 @@ var HoverPlugin = class {
           if (result && !(Array.isArray(result) && !result.length))
             view.dispatch({ effects: this.setHover.of(Array.isArray(result) ? result : [result]) });
         }
-      }, (e2) => logException(view.state, e2, "hover tooltip"));
+      }, (e) => logException(view.state, e, "hover tooltip"));
     } else if (open && !(Array.isArray(open) && !open.length)) {
       view.dispatch({ effects: this.setHover.of(Array.isArray(open) ? open : [open]) });
     }
@@ -14634,7 +14653,7 @@ var TreeNode = class _TreeNode extends BaseNode {
   }
   nextChild(i, dir, pos, side, mode = 0) {
     for (let parent = this; ; ) {
-      for (let { children, positions } = parent._tree, e2 = dir > 0 ? children.length : -1; i != e2; i += dir) {
+      for (let { children, positions } = parent._tree, e = dir > 0 ? children.length : -1; i != e; i += dir) {
         let next = children[i], start = positions[i] + parent.from;
         if (!checkSide(side, pos, start, start + next.length))
           continue;
@@ -15148,7 +15167,7 @@ var TreeCursor = class {
     }
     for (; parent; { index, _parent: parent } = parent) {
       if (index > -1)
-        for (let i = index + dir, e2 = dir < 0 ? -1 : parent._tree.children.length; i != e2; i += dir) {
+        for (let i = index + dir, e = dir < 0 ? -1 : parent._tree.children.length; i != e; i += dir) {
           let child = parent._tree.children[i];
           if (this.mode & IterMode.IncludeAnonymous || child instanceof TreeBuffer || !child.type.isAnonymous || hasChild(child))
             return false;
@@ -16174,7 +16193,7 @@ function sameArray2(a, b) {
 function powerSet(array) {
   let sets = [[]];
   for (let i = 0; i < array.length; i++) {
-    for (let j = 0, e2 = sets.length; j < e2; j++) {
+    for (let j = 0, e = sets.length; j < e; j++) {
       sets.push(sets[j].concat(array[i]));
     }
   }
@@ -17195,9 +17214,9 @@ var LanguageState = class _LanguageState {
 Language.state = /* @__PURE__ */ StateField.define({
   create: LanguageState.init,
   update(value, tr) {
-    for (let e2 of tr.effects)
-      if (e2.is(Language.setState))
-        return e2.value;
+    for (let e of tr.effects)
+      if (e.is(Language.setState))
+        return e.value;
     if (tr.startState.facet(language) != tr.state.facet(language))
       return LanguageState.init(tr.state);
     return value.apply(tr);
@@ -17405,7 +17424,7 @@ var indentUnit = /* @__PURE__ */ Facet.define({
     if (!values2.length)
       return "  ";
     let unit = values2[0];
-    if (!unit || /\S/.test(unit) || Array.from(unit).some((e2) => e2 != unit[0]))
+    if (!unit || /\S/.test(unit) || Array.from(unit).some((e) => e != unit[0]))
       throw new Error("Invalid indent unit: " + JSON.stringify(values2[0]));
     return unit;
   }
@@ -17755,16 +17774,16 @@ var foldState = /* @__PURE__ */ StateField.define({
     if (tr.isUserEvent("delete"))
       tr.changes.iterChangedRanges((fromA, toA) => folded = clearTouchedFolds(folded, fromA, toA));
     folded = folded.map(tr.changes);
-    for (let e2 of tr.effects) {
-      if (e2.is(foldEffect) && !foldExists(folded, e2.value.from, e2.value.to)) {
+    for (let e of tr.effects) {
+      if (e.is(foldEffect) && !foldExists(folded, e.value.from, e.value.to)) {
         let { preparePlaceholder } = tr.state.facet(foldConfig);
-        let widget = !preparePlaceholder ? foldWidget : Decoration.replace({ widget: new PreparedFoldWidget(preparePlaceholder(tr.state, e2.value)) });
-        folded = folded.update({ add: [widget.range(e2.value.from, e2.value.to)] });
-      } else if (e2.is(unfoldEffect)) {
+        let widget = !preparePlaceholder ? foldWidget : Decoration.replace({ widget: new PreparedFoldWidget(preparePlaceholder(tr.state, e.value)) });
+        folded = folded.update({ add: [widget.range(e.value.from, e.value.to)] });
+      } else if (e.is(unfoldEffect)) {
         folded = folded.update({
-          filter: (from, to) => e2.value.from != from || e2.value.to != to,
-          filterFrom: e2.value.from,
-          filterTo: e2.value.to
+          filter: (from, to) => e.value.from != from || e.value.to != to,
+          filterFrom: e.value.from,
+          filterTo: e.value.to
         });
       }
     }
@@ -18620,7 +18639,7 @@ var historyField_ = /* @__PURE__ */ StateField.define({
     return state;
   },
   toJSON(value) {
-    return { done: value.done.map((e2) => e2.toJSON()), undone: value.undone.map((e2) => e2.toJSON()) };
+    return { done: value.done.map((e) => e.toJSON()), undone: value.undone.map((e) => e.toJSON()) };
   },
   fromJSON(json) {
     return new HistoryState(json.done.map(HistEvent.fromJSON), json.undone.map(HistEvent.fromJSON));
@@ -18631,11 +18650,11 @@ function history2(config2 = {}) {
     historyField_,
     historyConfig.of(config2),
     EditorView.domEventHandlers({
-      beforeinput(e2, view) {
-        let command2 = e2.inputType == "historyUndo" ? undo : e2.inputType == "historyRedo" ? redo : null;
+      beforeinput(e, view) {
+        let command2 = e.inputType == "historyUndo" ? undo : e.inputType == "historyRedo" ? redo : null;
         if (!command2)
           return false;
-        e2.preventDefault();
+        e.preventDefault();
         return command2(view);
       }
     })
@@ -19794,9 +19813,9 @@ var dialogField = /* @__PURE__ */ StateField.define({
     return true;
   },
   update(value, tr) {
-    for (let e2 of tr.effects)
-      if (e2.is(dialogEffect))
-        value = e2.value;
+    for (let e of tr.effects)
+      if (e.is(dialogEffect))
+        value = e.value;
     return value;
   },
   provide: (f) => showPanel.from(f, (val) => val ? createLineDialog : null)
@@ -20446,7 +20465,7 @@ var SearchPanel = class {
     function button(name2, onclick, content2) {
       return crelt("button", { class: "cm-button", name: name2, onclick, type: "button" }, content2);
     }
-    this.dom = crelt("div", { onkeydown: (e2) => this.keydown(e2), class: "cm-search" }, [
+    this.dom = crelt("div", { onkeydown: (e) => this.keydown(e), class: "cm-search" }, [
       this.searchField,
       button("next", () => findNext(view), [phrase(view, "next")]),
       button("prev", () => findPrevious(view), [phrase(view, "previous")]),
@@ -20481,14 +20500,14 @@ var SearchPanel = class {
       this.view.dispatch({ effects: setSearchQuery.of(query) });
     }
   }
-  keydown(e2) {
-    if (runScopeHandlers(this.view, e2, "search-panel")) {
-      e2.preventDefault();
-    } else if (e2.keyCode == 13 && e2.target == this.searchField) {
-      e2.preventDefault();
-      (e2.shiftKey ? findPrevious : findNext)(this.view);
-    } else if (e2.keyCode == 13 && e2.target == this.replaceField) {
-      e2.preventDefault();
+  keydown(e) {
+    if (runScopeHandlers(this.view, e, "search-panel")) {
+      e.preventDefault();
+    } else if (e.keyCode == 13 && e.target == this.searchField) {
+      e.preventDefault();
+      (e.shiftKey ? findPrevious : findNext)(this.view);
+    } else if (e.keyCode == 13 && e.target == this.replaceField) {
+      e.preventDefault();
       replaceNext(this.view);
     }
   }
@@ -20782,7 +20801,7 @@ var FuzzyMatcher = class {
       return this.ret(word.length == this.pattern.length ? 0 : -100, [0, this.pattern.length]);
     let len = chars.length, anyTo = 0;
     if (direct < 0) {
-      for (let i = 0, e2 = Math.min(word.length, 200); i < e2 && anyTo < len; ) {
+      for (let i = 0, e = Math.min(word.length, 200); i < e && anyTo < len; ) {
         let next = codePointAt2(word, i);
         if (next == chars[anyTo] || next == folded[anyTo])
           any[anyTo++] = i;
@@ -20795,7 +20814,7 @@ var FuzzyMatcher = class {
     let byWordTo = 0, byWordFolded = false;
     let adjacentTo = 0, adjacentStart = -1, adjacentEnd = -1;
     let hasLower = /[a-z]/.test(word), wordAdjacent = true;
-    for (let i = 0, e2 = Math.min(word.length, 200), prevType = 0; i < e2 && byWordTo < len; ) {
+    for (let i = 0, e = Math.min(word.length, 200), prevType = 0; i < e && byWordTo < len; ) {
       let next = codePointAt2(word, i);
       if (direct < 0) {
         if (preciseTo < len && next == chars[preciseTo])
@@ -21017,19 +21036,19 @@ var CompletionTooltip = class {
     this.dom = document.createElement("div");
     this.dom.className = "cm-tooltip-autocomplete";
     this.updateTooltipClass(view.state);
-    this.dom.addEventListener("mousedown", (e2) => {
+    this.dom.addEventListener("mousedown", (e) => {
       let { options: options2 } = view.state.field(stateField).open;
-      for (let dom = e2.target, match; dom && dom != this.dom; dom = dom.parentNode) {
+      for (let dom = e.target, match; dom && dom != this.dom; dom = dom.parentNode) {
         if (dom.nodeName == "LI" && (match = /-(\d+)$/.exec(dom.id)) && +match[1] < options2.length) {
           this.applyCompletion(view, options2[+match[1]]);
-          e2.preventDefault();
+          e.preventDefault();
           return;
         }
       }
     });
-    this.dom.addEventListener("focusout", (e2) => {
+    this.dom.addEventListener("focusout", (e) => {
       let state = view.state.field(this.stateField, false);
-      if (state && state.tooltip && view.state.facet(completionConfig).closeOnBlur && e2.relatedTarget != view.contentDOM)
+      if (state && state.tooltip && view.state.facet(completionConfig).closeOnBlur && e.relatedTarget != view.contentDOM)
         view.dispatch({ effects: closeCompletionEffect.of(null) });
     });
     this.showOptions(options, cState.id);
@@ -21098,7 +21117,7 @@ var CompletionTooltip = class {
         infoResult.then((obj) => {
           if (obj && this.view.state.field(this.stateField, false) == cState)
             this.addInfoPane(obj, completion);
-        }).catch((e2) => logException(this.view.state, e2, "completion info"));
+        }).catch((e) => logException(this.view.state, e, "completion info"));
       } else {
         this.addInfoPane(infoResult, completion);
       }
@@ -21171,9 +21190,9 @@ var CompletionTooltip = class {
     ul.setAttribute("role", "listbox");
     ul.setAttribute("aria-expanded", "true");
     ul.setAttribute("aria-label", this.view.state.phrase("Completions"));
-    ul.addEventListener("mousedown", (e2) => {
-      if (e2.target == ul)
-        e2.preventDefault();
+    ul.addEventListener("mousedown", (e) => {
+      if (e.target == ul)
+        e.preventDefault();
     });
     let curSection = null;
     for (let i = range.from; i < range.to; i++) {
@@ -21360,7 +21379,7 @@ var CompletionState = class _CompletionState {
     });
     if (active.length == this.active.length && active.every((a, i) => a == this.active[i]))
       active = this.active;
-    let open = this.open, didSet = tr.effects.some((e2) => e2.is(setActiveEffect));
+    let open = this.open, didSet = tr.effects.some((e) => e.is(setActiveEffect));
     if (open && tr.docChanged)
       open = open.map(tr.changes);
     if (tr.selection || active.some((a) => a.hasResult() && tr.changes.touchesRange(a.from, a.to)) || !sameResults(active, this.active) || didSet)
@@ -21645,8 +21664,8 @@ var completionPlugin = /* @__PURE__ */ ViewPlugin.fromClass(class {
         for (let handler of query.context.abortListeners) {
           try {
             handler();
-          } catch (e2) {
-            logException(this.view.state, e2);
+          } catch (e) {
+            logException(this.view.state, e);
           }
         }
         query.context.abortListeners = null;
@@ -21657,7 +21676,7 @@ var completionPlugin = /* @__PURE__ */ ViewPlugin.fromClass(class {
     }
     if (this.debounceUpdate > -1)
       clearTimeout(this.debounceUpdate);
-    if (update.transactions.some((tr) => tr.effects.some((e2) => e2.is(startCompletionEffect))))
+    if (update.transactions.some((tr) => tr.effects.some((e) => e.is(startCompletionEffect))))
       this.pendingStart = true;
     let delay = this.pendingStart ? 50 : conf.activateOnTypingDelay;
     this.debounceUpdate = cState.active.some((a) => a.isPending && !this.running.some((q) => q.active.source == a.source)) ? setTimeout(() => this.startUpdate(), delay) : -1;
@@ -22462,7 +22481,7 @@ function hideTooltip(tr, tooltip) {
   if (result != null)
     return result;
   let line = tr.startState.doc.lineAt(tooltip.pos);
-  return !!(tr.effects.some((e2) => e2.is(setDiagnosticsEffect)) || tr.changes.touchesRange(line.from, Math.max(line.to, to)));
+  return !!(tr.effects.some((e) => e.is(setDiagnosticsEffect)) || tr.changes.touchesRange(line.from, Math.max(line.to, to)));
 }
 function maybeEnableLint(state, effects) {
   return state.field(lintState, false) ? effects : effects.concat(StateEffect.appendConfig.of(lintExtensions));
@@ -22596,8 +22615,8 @@ function renderDiagnostic(view, diagnostic, inPanel) {
   var _a2;
   let keys2 = inPanel ? assignKeys(diagnostic.actions) : [];
   return crelt("li", { class: "cm-diagnostic cm-diagnostic-" + diagnostic.severity }, crelt("span", { class: "cm-diagnosticText" }, diagnostic.renderMessage ? diagnostic.renderMessage(view) : diagnostic.message), (_a2 = diagnostic.actions) === null || _a2 === void 0 ? void 0 : _a2.map((action, i) => {
-    let fired = false, click = (e2) => {
-      e2.preventDefault();
+    let fired = false, click = (e) => {
+      e.preventDefault();
       if (fired)
         return;
       fired = true;
@@ -27668,7 +27687,7 @@ function isHTMLBlock(line, _cx, breaking) {
   if (line.next != 60)
     return -1;
   let rest = line.text.slice(line.pos);
-  for (let i = 0, e2 = HTMLBlockStyle.length - (breaking ? 1 : 0); i < e2; i++)
+  for (let i = 0, e = HTMLBlockStyle.length - (breaking ? 1 : 0); i < e; i++)
     if (HTMLBlockStyle[i][0].test(rest))
       return i;
   return -1;
@@ -28472,8 +28491,8 @@ var Buffer = class {
     return this;
   }
   writeElements(elts, offset = 0) {
-    for (let e2 of elts)
-      e2.writeTo(this, offset);
+    for (let e of elts)
+      e.writeTo(this, offset);
     return this;
   }
   finish(type, length) {
@@ -28951,9 +28970,9 @@ function injectMarks(elements, marks2) {
     while (eI < elts.length && elts[eI].to < mark.to)
       eI++;
     if (eI < elts.length && elts[eI].from < mark.from) {
-      let e2 = elts[eI];
-      if (e2 instanceof Element2)
-        elts[eI] = new Element2(e2.type, e2.from, e2.to, injectMarks(e2.children, [mark]));
+      let e = elts[eI];
+      if (e instanceof Element2)
+        elts[eI] = new Element2(e.type, e.from, e.to, injectMarks(e.children, [mark]));
     } else {
       elts.splice(eI++, 0, mark);
     }
@@ -29609,8 +29628,8 @@ var insertNewlineContinueMarkup = ({ state, dispatch }) => {
     let continued = inner.item && inner.item.from < line.from;
     let insert2 = "";
     if (!continued || /^[\s\d.)\-+*>]*/.exec(line.text)[0].length >= inner.to) {
-      for (let i = 0, e2 = context.length - 1; i <= e2; i++) {
-        insert2 += i == e2 && !continued ? context[i].marker(doc2, 1) : context[i].blank(i < e2 ? countColumn(line.text, 4, context[i + 1].from) - insert2.length : null);
+      for (let i = 0, e = context.length - 1; i <= e; i++) {
+        insert2 += i == e && !continued ? context[i].marker(doc2, 1) : context[i].blank(i < e ? countColumn(line.text, 4, context[i + 1].from) - insert2.length : null);
       }
     }
     let from = pos;
@@ -29642,8 +29661,8 @@ function nonTightList(node, doc2) {
 }
 function blankLine(context, state, line) {
   let insert2 = "";
-  for (let i = 0, e2 = context.length - 2; i <= e2; i++) {
-    insert2 += context[i].blank(i < e2 ? countColumn(line.text, 4, context[i + 1].from) - insert2.length : null, i < e2);
+  for (let i = 0, e = context.length - 2; i <= e; i++) {
+    insert2 += context[i].blank(i < e ? countColumn(line.text, 4, context[i + 1].from) - insert2.length : null, i < e);
   }
   return normalizeIndent(insert2, state);
 }
@@ -30152,9 +30171,9 @@ function getInitialState(editorEntry, doc2) {
     }
   }
   extensions2.push(
-    EditorView.updateListener.of((e2) => {
-      if (e2.view !== editorEntry.view) return;
-      if (!e2.docChanged) return;
+    EditorView.updateListener.of((e) => {
+      if (e.view !== editorEntry.view) return;
+      if (!e.docChanged) return;
       const reset = editorEntry.contentReset;
       if (editorEntry.debounce || reset) {
         clearTimeout(editorEntry.debounce);
@@ -30177,6 +30196,9 @@ function setupView(editorEntry, data3) {
   document.addEventListener(`layout:resize`, () => view.requestMeasure());
   return view;
 }
+
+// src/client/editor/editor-entry.js
+import { applyPatch as applyPatch2 } from "/vendor/diff.js";
 
 // src/client/files/sync.js
 import { createPatch } from "/vendor/diff.js";
@@ -30717,7 +30739,7 @@ function distanceIterator(start, minLine, maxLine) {
     }
   };
 }
-function applyPatch2(source, uniDiff) {
+function applyPatch(source, uniDiff) {
   var options = arguments.length > 2 && arguments[2] !== void 0 ? arguments[2] : {};
   if (typeof uniDiff === "string") {
     uniDiff = parsePatch(uniDiff);
@@ -30954,12 +30976,12 @@ var Rewinder = class _Rewinder {
       let { content: content2 } = this;
       if (!content2) content2 = `
 `;
-      newContent = applyPatch2(content2, reverse);
+      newContent = applyPatch(content2, reverse);
       if (newContent === false) {
         throw new Error(`could not apply patch`);
       }
     }
-    updateViewMaintainScroll2(editorEntry, newContent, false);
+    updateViewMaintainScroll(editorEntry, newContent, false);
     this.content = newContent;
     this.pos = this.pos + 1;
     fileEntry.classList.add(`revision`);
@@ -30979,12 +31001,12 @@ var Rewinder = class _Rewinder {
     } else if (forward.delete) {
       newContent = ``;
     } else {
-      newContent = applyPatch2(content2, forward);
+      newContent = applyPatch(content2, forward);
       if (newContent === false) {
         throw new Error(`could not apply patch`);
       }
     }
-    updateViewMaintainScroll2(fileEntry.state.editorEntry, newContent, false);
+    updateViewMaintainScroll(fileEntry.state.editorEntry, newContent, false);
     this.content = newContent;
     if (this.pos === 0) {
       fileEntry.classList.remove(`revision`);
@@ -31030,7 +31052,15 @@ async function syncContent(projectSlug6, fileEntry, forced = false) {
     fileEntry.updateContent(`diff`, patch);
     setSaveStatus(`Saved`);
   } else {
-    const response = await API.files.sync(projectSlug6, path2, patch);
+    let response;
+    try {
+      response = await API.files.sync(projectSlug6, path2, patch);
+    } catch (e) {
+      setSaveStatus(``);
+      new ErrorNotice(`Save failed \u2014 check your connection and try again.`);
+      editorEntry.debounce = false;
+      return;
+    }
     const responseHash = parseFloat(await response.text());
     if (responseHash === getFileSum(newContent)) {
       editorEntry.setContent(newContent);
@@ -31038,10 +31068,11 @@ async function syncContent(projectSlug6, fileEntry, forced = false) {
       updatePreview();
     } else {
       if (document.body.dataset.projectMember) {
+        new Notice(`Content out of sync \u2014 refreshing from server.`, 4e3);
         editorEntry.setContent(await fetchFileContents(projectSlug6, path2));
       }
       editorEntry.contentReset = true;
-      updateViewMaintainScroll2(editorEntry);
+      updateViewMaintainScroll(editorEntry);
     }
   }
   editorEntry.debounce = false;
@@ -31415,9 +31446,9 @@ var WebSocketInterface = class {
   async oncreate({ path: path2, isFile, from }) {
     const { id: id2, fileTree: fileTree5 } = this;
     if (from === id2) return;
-    const entry2 = fileTree5.__create(path2, isFile);
+    const entry = fileTree5.__create(path2, isFile);
     fileTree5.dispatchEvent(
-      new CustomEvent(`ot:created`, { detail: { entry: entry2, path: path2, isFile } })
+      new CustomEvent(`ot:created`, { detail: { entry, path: path2, isFile } })
     );
   }
   /**
@@ -31463,10 +31494,10 @@ var WebSocketInterface = class {
   async onmove({ isFile, oldPath, newPath, from }) {
     const { id: id2, fileTree: fileTree5 } = this;
     if (from === id2) return;
-    const entry2 = fileTree5.__move(isFile, oldPath, newPath);
+    const entry = fileTree5.__move(isFile, oldPath, newPath);
     fileTree5.dispatchEvent(
       new CustomEvent(`ot:moved`, {
-        detail: { entry: entry2, isFile, oldPath, newPath }
+        detail: { entry, isFile, oldPath, newPath }
       })
     );
   }
@@ -31568,24 +31599,24 @@ async function processUpload(root, items, dirPath = ``) {
       const updatedPath = path2 + item.name + "/";
       root.createEntry(updatedPath, false, false, bulkUpload);
       item.createReader().readEntries(async (entries) => {
-        for (let entry2 of entries) await iterate(entry2, updatedPath);
+        for (let entry of entries) await iterate(entry, updatedPath);
       });
     }
   }
   for (let item of items) {
     try {
-      let entry2;
-      if (!entry2 && item instanceof File) {
-        entry2 = item;
+      let entry;
+      if (!entry && item instanceof File) {
+        entry = item;
       }
-      if (!entry2 && item.webkitGetAsEntry) {
-        entry2 = item.webkitGetAsEntry() ?? entry2;
+      if (!entry && item.webkitGetAsEntry) {
+        entry = item.webkitGetAsEntry() ?? entry;
       }
-      if (!entry2 && item.getAsFile) {
-        entry2 = item.getAsFile();
+      if (!entry && item.getAsFile) {
+        entry = item.getAsFile();
       }
-      await iterate(entry2);
-    } catch (e2) {
+      await iterate(entry);
+    } catch (e) {
       return alert(localeStrings.INVALID_UPLOAD_TYPE(item.kind));
     }
   }
@@ -31657,19 +31688,19 @@ function makeDropZone(dirEntry) {
   }
   return abortController;
 }
-function inThisDir(dir, entry2) {
-  if (entry2 === dir) return true;
-  return entry2.closest(`dir-entry`) === dir;
+function inThisDir(dir, entry) {
+  if (entry === dir) return true;
+  return entry.closest(`dir-entry`) === dir;
 }
 function processDragMove(dirEntry, entryId) {
-  const entry2 = dirEntry.findInTree(`[data-id="${entryId}"]`);
-  delete entry2.dataset.id;
-  entry2.classList.remove(`dragging`);
-  if (entry2 === dirEntry) return;
+  const entry = dirEntry.findInTree(`[data-id="${entryId}"]`);
+  delete entry.dataset.id;
+  entry.classList.remove(`dragging`);
+  if (entry === dirEntry) return;
   let dirPath = dirEntry.path;
-  let newPath = (dirPath !== `.` ? dirPath : ``) + entry2.name;
-  if (entry2.isDir) newPath += `/`;
-  dirEntry.root.moveEntry(entry2, newPath);
+  let newPath = (dirPath !== `.` ? dirPath : ``) + entry.name;
+  if (entry.isDir) newPath += `/`;
+  dirEntry.root.moveEntry(entry, newPath);
 }
 
 // node_modules/custom-file-tree/src/classes/dir-entry.js
@@ -31836,8 +31867,8 @@ var DirEntry = class extends FileTreeElement {
    * never need to do any recursion: if there's an addEntry, that entry
    * goes here.
    */
-  addEntry(entry2) {
-    this.appendChild(entry2);
+  addEntry(entry) {
+    this.appendChild(entry);
     this.sort();
   }
   /**
@@ -32022,7 +32053,7 @@ var FileTree = class extends FileTreeElement {
     this.addExternalListener(
       document,
       `dragend`,
-      () => this.findAll(`.dragging`).forEach((e2) => e2.classList.remove(`dragging`))
+      () => this.findAll(`.dragging`).forEach((e) => e.classList.remove(`dragging`))
     );
   }
   attributeChangedCallback(name2, _, value) {
@@ -32096,24 +32127,24 @@ var FileTree = class extends FileTreeElement {
     return this.OT?.update(path2, type, update);
   }
   // A rename is a relocation where only the last part of the path changed.
-  renameEntry(entry2, newName) {
-    const oldPath = entry2.path;
-    const pos = oldPath.lastIndexOf(entry2.name);
+  renameEntry(entry, newName) {
+    const oldPath = entry.path;
+    const pos = oldPath.lastIndexOf(entry.name);
     let newPath = oldPath.substring(0, pos) + newName;
-    if (entry2.isDir) newPath += `/`;
-    const eventType = (entry2.isFile ? `file` : `dir`) + `:rename`;
-    this.#relocateEntry(entry2, oldPath, newPath, eventType);
+    if (entry.isDir) newPath += `/`;
+    const eventType = (entry.isFile ? `file` : `dir`) + `:rename`;
+    this.#relocateEntry(entry, oldPath, newPath, eventType);
   }
   // A move is a relocation where everything *but* the last part of the path may have changed.
-  moveEntry(entry2, newPath) {
-    const eventType = (entry2.isFile ? `file` : `dir`) + `:move`;
-    this.#relocateEntry(entry2, entry2.path, newPath, eventType);
+  moveEntry(entry, newPath) {
+    const eventType = (entry.isFile ? `file` : `dir`) + `:move`;
+    this.#relocateEntry(entry, entry.path, newPath, eventType);
   }
   // Deletes are a DOM removal of the entry itself, and a pruning
   // of the path -> entry map for any entry that started with the
   // same path, so we don't end up with any orphans.
-  removeEntry(entry2) {
-    const { path: path2, isFile, parentDir } = entry2;
+  removeEntry(entry) {
+    const { path: path2, isFile, parentDir } = entry;
     const eventType = (isFile ? `file` : `dir`) + `:delete`;
     const detail = { path: path2, emptyDir: this.removeEmptyDir };
     this.emit(eventType, detail, () => {
@@ -32143,10 +32174,10 @@ var FileTree = class extends FileTreeElement {
     }
     const detail = { path: path2, content: content2, bulk };
     const grant = (processedContent = content2) => {
-      const entry2 = this.__create(path2, isFile);
+      const entry = this.__create(path2, isFile);
       if (!bypassOT) this.OT?.create(path2, isFile, processedContent);
-      detail.entry = entry2;
-      return entry2;
+      detail.entry = entry;
+      return entry;
     };
     if (immediate) return grant();
     this.emit(eventType, detail, grant);
@@ -32173,7 +32204,7 @@ var FileTree = class extends FileTreeElement {
     return dir;
   }
   // private function for initiating <file-entry> or <dir-entry> path changes
-  #relocateEntry(entry2, oldPath, newPath, eventType) {
+  #relocateEntry(entry, oldPath, newPath, eventType) {
     const { entries } = this;
     if (oldPath === newPath) return;
     if (newPath.startsWith(oldPath)) {
@@ -32195,49 +32226,49 @@ var FileTree = class extends FileTreeElement {
     }
     const detail = { oldPath, newPath };
     this.emit(eventType, detail, () => {
-      this.__move(entry2.isFile, oldPath, newPath);
-      this.OT?.move(entry2.isFile, oldPath, newPath);
-      detail.entry = entry2;
-      return entry2;
+      this.__move(entry.isFile, oldPath, newPath);
+      this.OT?.move(entry.isFile, oldPath, newPath);
+      detail.entry = entry;
+      return entry;
     });
   }
   // ================================================================================================
   // create notification via websocket or immediate code path:
   __create(path2, isFile) {
     const EntryType = isFile ? FileEntry : DirEntry;
-    const entry2 = new EntryType();
-    entry2.path = path2;
-    return this.__insert(entry2);
+    const entry = new EntryType();
+    entry.path = path2;
+    return this.__insert(entry);
   }
   // fall-through for creation, but also used by file-entry
   // when inserted manually, to ensure proper path recording.
-  __insert(entry2) {
+  __insert(entry) {
     const { entries } = this;
-    if (entries[entry2.path]) return;
-    entries[entry2.path] = entry2;
-    if (!entry2.parentNode) {
-      this.#mkdir(entry2).addEntry(entry2);
+    if (entries[entry.path]) return;
+    entries[entry.path] = entry;
+    if (!entry.parentNode) {
+      this.#mkdir(entry).addEntry(entry);
     }
-    return entry2;
+    return entry;
   }
   // move notification via websocket or immediate code path:
   __move(isFile, oldPath, newPath, when) {
     const { entries } = this;
-    const entry2 = entries[oldPath];
+    const entry = entries[oldPath];
     Object.keys(entries).forEach((key) => {
       if (key.startsWith(oldPath)) {
-        const entry3 = entries[key];
-        const updated = entry3.updatePath(isFile, oldPath, newPath);
+        const entry2 = entries[key];
+        const updated = entry2.updatePath(isFile, oldPath, newPath);
         if (updated) {
-          entries[entry3.path] = entry3;
+          entries[entry2.path] = entry2;
           delete entries[key];
         }
       }
     });
-    const { dirPath } = entries[newPath] = entry2;
+    const { dirPath } = entries[newPath] = entry;
     let dir = dirPath ? entries[dirPath] : this.rootDir;
-    dir.addEntry(entry2);
-    return entry2;
+    dir.addEntry(entry);
+    return entry;
   }
   // update notification via websocket or immediate code path:
   __update(path2, type, update, ours) {
@@ -32248,16 +32279,16 @@ var FileTree = class extends FileTreeElement {
   // delete notification via websocket or immediate code path:
   __delete(path2, isFile, when) {
     const { entries } = this;
-    const entry2 = entries[path2];
-    const removed = [entry2];
+    const entry = entries[path2];
+    const removed = [entry];
     if (isFile) {
-      entry2.remove();
+      entry.remove();
       delete entries[path2];
     } else {
-      Object.entries(entries).forEach(([key, entry3]) => {
+      Object.entries(entries).forEach(([key, entry2]) => {
         if (key.startsWith(path2)) {
-          removed.push(entry3);
-          entry3.remove();
+          removed.push(entry2);
+          entry2.remove();
           delete entries[key];
         }
       });
@@ -32267,9 +32298,9 @@ var FileTree = class extends FileTreeElement {
   // ================================================================================================
   // Select an entry by its path
   select(path2) {
-    const entry2 = this.entries[path2];
-    if (!entry2) throw new Error(localeStrings.PATH_DOES_NOT_EXIST(path2));
-    entry2.select();
+    const entry = this.entries[path2];
+    if (!entry) throw new Error(localeStrings.PATH_DOES_NOT_EXIST(path2));
+    entry.select();
   }
   // Counterpart to select()
   unselect() {
@@ -32277,22 +32308,22 @@ var FileTree = class extends FileTreeElement {
   }
   // Entry selection depends on the element, so we hand that
   // off to the entry itself once granted. (if granted)
-  selectEntry(entry2, detail = {}) {
-    const eventType = (entry2.isFile ? `file` : `dir`) + `:click`;
-    detail.path = entry2.path;
+  selectEntry(entry, detail = {}) {
+    const eventType = (entry.isFile ? `file` : `dir`) + `:click`;
+    detail.path = entry.path;
     this.emit(eventType, detail, () => {
-      entry2.select();
-      detail.entry = entry2;
-      return entry2;
+      entry.select();
+      detail.entry = entry;
+      return entry;
     });
   }
-  toggleDirectory(entry2, detail = {}) {
-    if (entry2.isFile) return;
+  toggleDirectory(entry, detail = {}) {
+    if (entry.isFile) return;
     const eventType = `dir:toggle`;
-    detail.path = entry2.path;
+    detail.path = entry.path;
     this.emit(eventType, detail, () => {
-      detail.entry = entry2;
-      entry2.toggle();
+      detail.entry = entry;
+      entry.toggle();
     });
   }
   sort() {
@@ -32362,11 +32393,11 @@ emptyImage.src = `data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=`;
 var EditorEntry = class _EditorEntry {
   // Static properties and methods
   static entries = [];
-  static addEntry(entry2) {
-    _EditorEntry.entries.push(entry2);
+  static addEntry(entry) {
+    _EditorEntry.entries.push(entry);
   }
-  static removeEntry(entry2) {
-    const pos = _EditorEntry.entries.indexOf(entry2);
+  static removeEntry(entry) {
+    const pos = _EditorEntry.entries.indexOf(entry);
     _EditorEntry.entries.splice(pos, 1);
   }
   static getEntries() {
@@ -32379,13 +32410,13 @@ var EditorEntry = class _EditorEntry {
     return entries.at(pos + 1);
   }
   static getOrCreateFileEditTab(fileEntry, virtual = false) {
-    const entry2 = _EditorEntry.entries.find(
-      (e2) => e2.fileEntry.path === fileEntry.path
+    const entry = _EditorEntry.entries.find(
+      (e) => e.fileEntry.path === fileEntry.path
     );
-    if (entry2) {
-      entry2.fileEntry = fileEntry;
-      fileEntry.setState({ editorEntry: entry2 });
-      return entry2.select();
+    if (entry) {
+      entry.fileEntry = fileEntry;
+      fileEntry.setState({ editorEntry: entry });
+      return entry.select();
     }
     return new _EditorEntry(fileEntry, virtual);
   }
@@ -32427,7 +32458,7 @@ var EditorEntry = class _EditorEntry {
       try {
         data3 = await fetchFileContents(projectSlug2, path2, mimetype);
         if (data3 instanceof Error) data3 = void 0;
-      } catch (e2) {
+      } catch (e) {
       }
     }
     return data3 || new ErrorNotice(`Could not load ${path2}`);
@@ -32560,7 +32591,7 @@ var EditorEntry = class _EditorEntry {
     const { fileEntry, editor, tab, view } = this;
     fileEntry.select();
     ensureFileTreeWidth();
-    _EditorEntry.entries.forEach((e2) => e2.blur());
+    _EditorEntry.entries.forEach((e) => e.blur());
     editor.classList.add(`active`);
     tab.classList.add(`active`);
     tab.scrollIntoView();
@@ -32597,8 +32628,8 @@ var EditorEntry = class _EditorEntry {
     const { type, update, ours } = evt.detail;
     if (type !== `diff`) return;
     if (!ours) {
-      const oldContent = entry.content;
-      this.setContent(applyPatch(oldContent, update));
+      const oldContent = this.content;
+      this.setContent(applyPatch2(oldContent, update));
       updateViewMaintainScroll(this);
     }
     updatePreview();
@@ -32692,8 +32723,8 @@ fileTree4.addEventListener(`tree:ready`, async () => {
     const entries = defaultCollapse.split(`
 `).map((v) => v.trim()).filter(Boolean);
     entries.forEach((path2) => {
-      const entry2 = fileTree4.querySelector(`dir-entry[path="${path2}/"]`);
-      entry2?.toggle(true);
+      const entry = fileTree4.querySelector(`dir-entry[path="${path2}/"]`);
+      entry?.toggle(true);
     });
   }
   if (fileEntry) {
@@ -32822,27 +32853,27 @@ async function uploadFile(fileTree5, fileName, content2, grant) {
 async function uploadArchive(path2, content2, bulkUploadPaths) {
   const basePath = path2.substring(0, path2.lastIndexOf(`/`) + 1);
   let { entries } = await unzip(new Uint8Array(content2).buffer);
-  entries = Object.entries(entries).map(([path3, entry2]) => ({
+  entries = Object.entries(entries).map(([path3, entry]) => ({
     path: path3,
-    entry: entry2
+    entry
   }));
   const prefix = (function findPrefix() {
     let a = entries[0].path;
     if (!a.includes(`/`)) return;
     a = a.substring(0, a.indexOf(`/`) + 1);
-    if (entries.every((e2) => e2.path.startsWith(a))) return a;
+    if (entries.every((e) => e.path.startsWith(a))) return a;
   })();
   if (prefix) {
     const singletonDir = prefix.substring(0, prefix.length - 1);
     if (confirm(`Unpack into the root, rather than "${singletonDir}"?`)) {
-      entries.forEach((e2) => e2.path = e2.path.replace(prefix, ``));
+      entries.forEach((e) => e.path = e.path.replace(prefix, ``));
     }
   }
-  bulkUploadPaths.push(...entries.map((e2) => e2.path));
-  for await (let { path: path3, entry: entry2 } of entries) {
+  bulkUploadPaths.push(...entries.map((e) => e.path));
+  for await (let { path: path3, entry } of entries) {
     path3 = basePath + path3;
-    const arrayBuffer = await entry2.arrayBuffer();
-    const isFile = !entry2.isDirectory;
+    const arrayBuffer = await entry.arrayBuffer();
+    const isFile = !entry.isDirectory;
     let content3;
     if (isFile && arrayBuffer.byteLength > 0) {
       content3 = new TextDecoder().decode(arrayBuffer);
@@ -32892,13 +32923,13 @@ async function addFileCreate(fileTree5, projectSlug6) {
   });
 }
 function updateEditorBindings(fileTreeEntry) {
-  const { path: path2, state: entry2 } = fileTreeEntry;
-  if (!entry2) return;
+  const { path: path2, state: entry } = fileTreeEntry;
+  if (!entry) return;
   let key = path2;
   if (key.includes(`/`)) {
     key = key.substring(key.lastIndexOf(`/`) + 1);
   }
-  const { tab, panel } = entry2;
+  const { tab, panel } = entry;
   if (tab) {
     tab.title = path2;
     tab.childNodes.forEach((n) => {
@@ -32910,7 +32941,7 @@ function updateEditorBindings(fileTreeEntry) {
   if (panel) {
     panel.title = panel.id = path2;
   }
-  fileTreeEntry.setState(entry2);
+  fileTreeEntry.setState(entry);
 }
 async function addFileMove(fileTree5, projectSlug6) {
   const renameHandler = async (evt) => {
@@ -32945,8 +32976,8 @@ async function addFileDelete(fileTree5, projectSlug6) {
   fileTree5.addEventListener(`file:delete`, async (evt) => {
     const { path: path2, grant } = evt.detail;
     const runDelete = () => {
-      const [entry2] = grant();
-      const { editorEntry } = entry2.state ?? {};
+      const [entry] = grant();
+      const { editorEntry } = entry.state ?? {};
       editorEntry?.unload();
     };
     if (fileTree5.OT) {
@@ -32963,8 +32994,8 @@ async function addFileDelete(fileTree5, projectSlug6) {
           new Warning(msg);
           console.warn(`${msg} (status:${response.status})`);
         }
-      } catch (e2) {
-        console.error(e2);
+      } catch (e) {
+        console.error(e);
       }
     }
     updatePreview();
@@ -33078,7 +33109,7 @@ var LogView = class {
   setContent(content2 = ``) {
     const editorEntry = this.editor;
     editorEntry.setContent(content2);
-    updateViewMaintainScroll2(editorEntry);
+    updateViewMaintainScroll(editorEntry);
   }
   toggle(state = !this.open) {
     this.open = state;
@@ -33097,8 +33128,8 @@ var LogView = class {
             since = new Date(Date.parse(datetime) + 10).toISOString();
             this.append(output);
           }
-        } catch (e2) {
-          console.warn(e2);
+        } catch (e) {
+          console.warn(e);
         }
       };
       this.poll = setInterval(pollData, this.pollingInterval);
@@ -33140,7 +33171,7 @@ function disableSaveHotkey() {
     if (key === `s`) {
       if (mac2 && metaKey || ctrlKey) {
         evt.preventDefault();
-        const active = EditorEntry.getEntries().find((e2) => e2.tab?.classList.contains(`active`));
+        const active = EditorEntry.getEntries().find((e) => e.tab?.classList.contains(`active`));
         active?.sync();
         new Notice(`Your files are auto-saved =)`, 2e3);
       }
@@ -33174,7 +33205,7 @@ function connectPrettierButton() {
     format.hidden = false;
     const { editorEntry } = fileEntry.state;
     editorEntry.setContent(await fetchFileContents(projectSlug5, fileName));
-    updateViewMaintainScroll2(editorEntry);
+    updateViewMaintainScroll(editorEntry);
   });
 }
 function enableRewindFunctions() {

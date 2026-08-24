@@ -98,17 +98,22 @@ export async function checkProjectHealth(req, res, next) {
   } else {
     // First check Docker's own healthcheck status for definitive states.
     const dockerStatus = checkContainerHealth(project);
-    if (dockerStatus === `failed`) {
-      res.locals.healthStatus = `failed`;
-    } else if (dockerStatus === `not running`) {
-      // Container exited — restart it, but only up to 3 times before giving up.
+    if (dockerStatus === `failed` || dockerStatus === `not running`) {
+      // Container exited or stopped — try restarting it.
+      // For 'failed' (Exited), docker restart preserves the crash logs while
+      // recovering. Limit attempts to prevent a crash-loop storm.
       binding.failedRestarts = (binding.failedRestarts ?? 0) + 1;
       if (binding.failedRestarts > 3) {
-        console.log(`[health] ${project.slug} failed to start ${binding.failedRestarts} times, giving up`);
+        console.log(`[health] ${project.slug} failed to restart ${binding.failedRestarts} times, giving up`);
         res.locals.healthStatus = `failed`;
       } else {
-        console.log(`[health] ${project.slug} container not running, restarting (attempt ${binding.failedRestarts})`);
-        runContainer(project);
+        const action = dockerStatus === `failed` ? `restarting (preserving logs)` : `starting`;
+        console.log(`[health] ${project.slug} container ${dockerStatus}, ${action} (attempt ${binding.failedRestarts})`);
+        if (dockerStatus === `failed`) {
+          restartContainer(project);
+        } else {
+          runContainer(project);
+        }
         res.locals.healthStatus = `wait`;
       }
     } else if (dockerStatus === `ready`) {
@@ -480,6 +485,9 @@ export async function restartProject(req, res, next) {
     // do nothing. Static servers don't need restarting.
   } else {
     await restartContainer(project);
+    // Reset the auto-restart counter so the project gets fresh recovery attempts.
+    const binding = portBindings[project.slug];
+    if (binding) binding.failedRestarts = 0;
   }
   next();
 }
