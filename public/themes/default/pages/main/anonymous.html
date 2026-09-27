@@ -1,46 +1,56 @@
 <p>
-  This is the code platform for Binoculars to Binomials. It's a place where you can make and share fun web projects that are about birds and data.
+  This is the code platform for Binoculars to Binomials. It's a place where you
+  can make and share fun web projects that are about birds and data.
 </p>
 
 <img style="max-width: 90%; border: 1px solid black" src="screenshot.png" />
 
-<h2>Log in</h2>
-
-<p>If you already have a Binoculars to Binomials account on this website, just log in:</p>
-
-<ul>
-  {% for entry in availableProviders %}
-    <li>
-      using
-      <a href="/auth/{{ entry.service }}"
-        >{{ entry.service_domain or entry.service }}</a
-      >
-    </li>
-  {% endfor %}
-</ul>
-
-<h2>Sign up</h2>
-
-<p>
-  If you're part of the <a href="https://jerthorp.me/learning" target="_blank">Binoculars to Binomials</a> community, or you'd like to be, you can request an account below. If I know you or you reach out, I'll enable it.
-</p>
-
-<ul>
-  <li class="full-width">
-    <form id="signup" method="POST">
+{% if authError %}
+  <div class="auth-notice">
+    {% if authError == "no_account" %}
       <p>
-        <label>Step 1: pick a username:</label>
+        <strong>We couldn't log you in</strong> — there's no Binoculars to
+        Binomials account linked to that {{ authErrorService or "" }} login yet.
+        If you're new here, sign up below; it only takes a minute.
+      </p>
+    {% else %}
+      <p>
+        <strong>We couldn't log you in.</strong> Something went wrong. If you're
+        new here, sign up below instead of logging in.
+      </p>
+    {% endif %}
+  </div>
+{% endif %}
+
+<h2>Get started</h2>
+
+<div class="auth-options">
+  <div class="auth-option auth-option--signup" id="signup">
+    <h3>New here? Sign up</h3>
+
+    <p>
+      If you're part of the
+      <a href="https://jerthorp.me/learning" target="_blank"
+        >Binoculars to Binomials</a
+      >
+      community, or you'd like to be, you can request an account below. If I
+      know you or you reach out, I'll enable it.
+    </p>
+
+    <form id="signup-form" method="POST">
+      <p>
+        <label>Step 1: pick a username</label>
         <input
           type="text"
           placeholder="Write your username here"
           autocomplete="new-password"
         />
-        <br />
         <span style="color: red"></span>
       </p>
       <p>
-        Step 2: pick which auth service you want to be your primary login
-        method:
+        <label
+          >Step 2: pick which service will be your primary login method</label
+        >
         {% for entry in availableProviders %}
           <button class="provider" data-name="{{ entry.service }}" disabled>
             {{ entry.service_domain or entry.service }}
@@ -49,22 +59,28 @@
       </p>
     </form>
 
-    <hr />
-
-    <p>
-      Note that your user name is "what you want people to see". Whether you
-      will be able to register that will be based on whether or not that name's
-      "slug" equivalent (i.e. a url-safe equivalent) is already taken or not.
+    <p class="auth-option-fineprint">
+      Your username is "what you want people to see"; whether you can register
+      it depends on whether its url-safe "slug" equivalent is already taken. You
+      can add more login methods later, once your account is enabled, so losing
+      access to one service won't lock you out.
     </p>
+  </div>
 
-    <p>
-      Also note that you can add additional authentication methods once your
-      account has been enabled, so that even if you lose access to a service,
-      you're not suddenly also locked out of your account here.
-    </p>
-  </li>
-</ul>
+  <div class="auth-option auth-option--login">
+    <h3>Already have an account? Log in</h3>
 
+    <p>Log in using whichever service you signed up with:</p>
+
+    <div class="provider-links">
+      {% for entry in availableProviders %}
+        <a class="provider-link" href="/auth/{{ entry.service }}"
+          >{{ entry.service_domain or entry.service }}</a
+        >
+      {% endfor %}
+    </div>
+  </div>
+</div>
 
 <h2>I signed up but I can't do anything?</h2>
 
@@ -135,7 +151,8 @@
   <h2>Course Examples</h2>
 
   <p>
-    Here are some projects from the community, selected as examples to learn from or remix.
+    Here are some projects from the community, selected as examples to learn
+    from or remix.
     <a href="/examples">See all course examples →</a>
   </p>
 
@@ -172,6 +189,9 @@
 
 <h2>Who runs this instance?</h2>
 
-<p>It's me, <a href="https://bsky.app/profile/jerthorp.bsky.social">Jer Thorp</a>!</p>
+<p>
+  It's me,
+  <a href="https://bsky.app/profile/jerthorp.bsky.social">Jer Thorp</a>!
+</p>
 
 <script src="/themes/default/js/signup.js" async defer></script>

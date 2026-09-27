@@ -91,24 +91,48 @@ export function processOAuthLogin(
 
   let user;
 
-  // If we have a user slug, this is a new account signup
-  if (username && slug) {
-    user = processUserSignup(username, userObject);
-  }
+  try {
+    // If we have a user slug, this is a new account signup
+    if (username && slug) {
+      user = processUserSignup(username, userObject);
+    }
 
-  // If we have a new provider name, we need to add this
-  // as an additional login provider for this user's account
-  else if (newProvider) {
-    user = addLoginProviderForUser(sessionUser, userObject);
-  }
+    // If we have a new provider name, we need to add this
+    // as an additional login provider for this user's account
+    else if (newProvider) {
+      user = addLoginProviderForUser(sessionUser, userObject);
+    }
 
-  // If not, this is a regular login, where we need to find
-  // the user that belongs to this service profile.
-  else {
-    user = processUserLogin(userObject);
+    // If not, this is a regular login, where we need to find
+    // the user that belongs to this service profile.
+    else {
+      user = processUserLogin(userObject);
+    }
+  } catch (err) {
+    // Rather than letting this blow up into an unstyled 500 page
+    // (which is what students hit when they click "log in" without
+    // having signed up yet), record why this failed so the /error
+    // route can send them back to the homepage with a helpful,
+    // specific message instead.
+    req.session.authError = err.message;
+    return done(null, false);
   }
 
   return done(null, user);
+}
+
+/**
+ * Turn a failed login/signup attempt into a friendly redirect back
+ * to the homepage, rather than the bare "Unknown Error" dead end.
+ */
+function authErrorRedirect(service) {
+  return (req, res) => {
+    const message = req.session.authError;
+    delete req.session.authError;
+    const reason =
+      message === `No user tied to this service` ? `no_account` : `unknown`;
+    res.redirect(`/?auth_error=${reason}&auth_service=${service}`);
+  };
 }
 
 /**
@@ -121,7 +145,7 @@ export function addGithubAuth(app, settings = githubSettings) {
   passport.use(githubStrategy);
 
   const github = Router();
-  github.get(`/error`, (req, res) => res.send(`Unknown Error`));
+  github.get(`/error`, authErrorRedirect(`github`));
   github.get(`/callback`, handleGithubCallback, (req, res) =>
     res.redirect(`/`),
   );
@@ -140,7 +164,7 @@ export function addGoogleAuth(app, settings = googleSettings) {
   passport.use(googleStrategy);
 
   const google = Router();
-  google.get(`/error`, (req, res) => res.send(`Unknown Error`));
+  google.get(`/error`, authErrorRedirect(`google`));
   google.get(`/callback`, handleGoogleCallback, (req, res) =>
     res.redirect(`/`),
   );
@@ -159,7 +183,7 @@ export function addMastodonAuth(app, settings = mastodonSettings) {
   passport.use(mastodonStrategy);
 
   const mastodon = Router();
-  mastodon.get(`/error`, (req, res) => res.send(`Unknown Error`));
+  mastodon.get(`/error`, authErrorRedirect(`mastodon`));
   mastodon.get(`/callback`, handleMastodonCallback, (req, res) =>
     res.redirect(`/`),
   );

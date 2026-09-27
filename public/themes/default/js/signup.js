@@ -1,4 +1,4 @@
-const signup = document.getElementById(`signup`);
+const signup = document.getElementById(`signup-form`);
 
 (function processSignupForm() {
   if (!signup) return;
@@ -29,6 +29,6 @@ const signup = document.getElementById(`signup`);
         signup.action = `${signup.dataset.action}/${submit.dataset.name}`;
       });
       return submit;
-    }
+    },
   );
 })();

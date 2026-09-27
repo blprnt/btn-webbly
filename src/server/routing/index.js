@@ -92,6 +92,8 @@ export function setupRoutes(app) {
         ...process.env,
         ...res.locals,
         ...req.session,
+        authError: req.query.auth_error,
+        authErrorService: req.query.auth_service,
       }),
   );
 
@@ -105,17 +107,13 @@ export function setupRoutes(app) {
   );
 
   // course examples page
-  app.get(
-    `/examples`,
-    bindCommonValues,
-    loadCourseExamples,
-    (req, res) =>
-      res.render(`examples.html`, {
-        currentTime: Date.now(),
-        ...process.env,
-        ...res.locals,
-        ...req.session,
-      }),
+  app.get(`/examples`, bindCommonValues, loadCourseExamples, (req, res) =>
+    res.render(`examples.html`, {
+      currentTime: Date.now(),
+      ...process.env,
+      ...res.locals,
+      ...req.session,
+    }),
   );
 
   // static routes for the website itself
