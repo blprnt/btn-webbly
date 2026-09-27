@@ -270,23 +270,26 @@ var newtab = document.querySelector(`#preview-buttons .newtab`);
 var preview = document.getElementById(`preview`);
 var previewLabel = document.getElementById(`preview-label`);
 var { projectSlug, useWebsockets } = document.body.dataset;
-if (previewLabel && useWebsockets) {
-  let reflectConnectionState = function(connected2) {
-    previewLabel.textContent = connected2 ? defaultLabel : `Disconnected \u2014 not updating`;
-    previewLabel.classList.toggle(`offline`, !connected2);
-  };
-  const defaultLabel = previewLabel.textContent;
-  reflectConnectionState(isConnected());
-  onConnectionChange(reflectConnectionState);
-}
 var failures = 0;
 var containerReady = false;
 var updateInProgress = false;
 var refresh = true;
+var defaultLabel = previewLabel?.textContent;
+function updateLabel() {
+  if (!previewLabel) return;
+  const offline = useWebsockets && !isConnected();
+  const paused = !offline && !refresh;
+  previewLabel.textContent = offline ? `Disconnected \u2014 not updating` : paused ? `Paused` : defaultLabel;
+  previewLabel.classList.toggle(`offline`, offline);
+  previewLabel.classList.toggle(`paused`, paused);
+}
+updateLabel();
+if (useWebsockets) onConnectionChange(updateLabel);
 if (pause) {
   pause.addEventListener(`click`, () => {
     refresh = !refresh;
     pause.textContent = refresh ? `pause` : `refresh`;
+    updateLabel();
     if (refresh) updatePreview();
   });
 }

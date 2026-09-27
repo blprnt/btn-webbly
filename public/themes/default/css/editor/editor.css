@@ -97,6 +97,7 @@ html {
 
           &:nth-child(2) {
             padding: 0.2em 0;
+            gap: 0.3em;
           }
 
           .link-back,
@@ -106,6 +107,14 @@ html {
             margin: 0.25em;
             margin-bottom: 0;
             height: 100%;
+            padding: 0.15em 0.5em;
+            border-radius: 4px;
+            text-decoration: none;
+            transition: background 0.15s;
+
+            &:hover {
+              background: rgba(0, 0, 0, 0.08);
+            }
           }
 
           .projectname {
@@ -187,6 +196,10 @@ html {
               border-radius: 4px;
               pointer-events: none;
               z-index: 100;
+            }
+
+            .button-icon {
+              margin-right: 0.3em;
             }
           }
         }
@@ -370,6 +383,11 @@ html {
             opacity: 1;
             font-weight: bold;
             color: var(--notice-error-background);
+          }
+
+          &.paused {
+            opacity: 1;
+            font-weight: bold;
           }
         }
       }

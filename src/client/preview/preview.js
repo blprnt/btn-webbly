@@ -9,33 +9,40 @@ const preview = document.getElementById(`preview`);
 const previewLabel = document.getElementById(`preview-label`);
 const { projectSlug, useWebsockets } = document.body.dataset;
 
-// Make it obvious when the preview has stopped auto-updating because
-// the file-sync connection dropped, rather than leaving the static
-// "Live preview" label up while nothing is actually happening.
-if (previewLabel && useWebsockets) {
-  const defaultLabel = previewLabel.textContent;
-
-  function reflectConnectionState(connected) {
-    previewLabel.textContent = connected
-      ? defaultLabel
-      : `Disconnected — not updating`;
-    previewLabel.classList.toggle(`offline`, !connected);
-  }
-
-  reflectConnectionState(isConnected());
-  onConnectionChange(reflectConnectionState);
-}
-
 let failures = 0;
 let containerReady = false;
 let updateInProgress = false;
 
 let refresh = true;
 
+// Make the "Live preview" label an honest status readout instead of
+// static text: it should say so when auto-updating is off, whether
+// that's because the user paused it, or because the file-sync
+// connection dropped and nothing is actually reaching the server
+// to trigger an update in the first place (see connection-state.js).
+const defaultLabel = previewLabel?.textContent;
+
+function updateLabel() {
+  if (!previewLabel) return;
+  const offline = useWebsockets && !isConnected();
+  const paused = !offline && !refresh;
+  previewLabel.textContent = offline
+    ? `Disconnected — not updating`
+    : paused
+      ? `Paused`
+      : defaultLabel;
+  previewLabel.classList.toggle(`offline`, offline);
+  previewLabel.classList.toggle(`paused`, paused);
+}
+
+updateLabel();
+if (useWebsockets) onConnectionChange(updateLabel);
+
 if (pause) {
   pause.addEventListener(`click`, () => {
     refresh = !refresh;
     pause.textContent = refresh ? `pause` : `refresh`;
+    updateLabel();
     if (refresh) updatePreview();
   });
 }

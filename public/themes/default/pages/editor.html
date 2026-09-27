@@ -44,9 +44,16 @@
               >help</a
             >
             {% if editRights and projectOwner %}
-              <button class="projectname project-settings" title="Change project settings">{{ project.name }}</button>
+              <button
+                class="projectname project-settings"
+                title="Change project settings"
+              >
+                {{ project.name }}
+              </button>
             {% else %}
-              <span class="projectname" title="{{ project.name }}">{{ project.name }}</span>
+              <span class="projectname" title="{{ project.name }}"
+                >{{ project.name }}</span
+              >
             {% endif %}
             {% if user and user.enabled_at %}
               <a
@@ -64,12 +71,17 @@
               {% endif %}
               {% if user.enabled_at and not starter %}
                 <button id="download" title="Download this project as a .zip">
-                  💾
+                  <span class="button-icon" aria-hidden="true">💾</span>
+                  download
                 </button>
               {% endif %}
               {% if editRights %}
-                <button id="format" title="Format code (Prettier)">🤩</button>
-                <button id="rewind" title="Use the time machine!">🔄</button>
+                <button id="format" title="Format code (Prettier)">
+                  <span class="button-icon" aria-hidden="true">🤩</span> format
+                </button>
+                <button id="rewind" title="Use the time machine!">
+                  <span class="button-icon" aria-hidden="true">🔄</span> rewind
+                </button>
               {% endif %}
             {% endif %}
             <span id="save-status"></span>
@@ -131,18 +143,21 @@
     {% include "fragments/settings.html" %}
 
     {% if new == "1" and projectOwner %}
-    <dialog id="welcome-dialog">
-      <h2>This is your project!</h2>
-      <p>It's called <strong>{{ project.name }}</strong>.</p>
-      <p>You can change the name (and other settings) by clicking the <strong>{{ project.name }}</strong> button in the top-left corner.</p>
-      <form method="dialog">
-        <button autofocus>Got it!</button>
-      </form>
-    </dialog>
-    <script>
-      document.getElementById('welcome-dialog').showModal();
-      history.replaceState(null, '', location.pathname);
-    </script>
+      <dialog id="welcome-dialog">
+        <h2>This is your project!</h2>
+        <p>It's called <strong>{{ project.name }}</strong>.</p>
+        <p>
+          You can change the name (and other settings) by clicking the
+          <strong>{{ project.name }}</strong> button in the top-left corner.
+        </p>
+        <form method="dialog">
+          <button autofocus>Got it!</button>
+        </form>
+      </dialog>
+      <script>
+        document.getElementById("welcome-dialog").showModal();
+        history.replaceState(null, "", location.pathname);
+      </script>
     {% endif %}
 
     <script src="/js/editor.bundle.js" type="module" async></script>
