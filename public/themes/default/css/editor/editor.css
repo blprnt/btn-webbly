@@ -141,6 +141,12 @@ html {
             padding: 0 0.4em;
             white-space: nowrap;
             transition: opacity 0.3s;
+
+            &.offline {
+              opacity: 1;
+              font-weight: bold;
+              color: var(--notice-error-background);
+            }
           }
 
           button {
@@ -155,13 +161,15 @@ html {
             border-radius: 6px;
             padding: 0 0.7em;
             box-shadow: 0 1px 3px var(--editor-utilities-button-box-shadow);
-            transition: background 0.15s, color 0.15s;
+            transition:
+              background 0.15s,
+              color 0.15s;
             position: relative;
 
             &:hover {
-              background: #0C7C5F;
-              color: #F2F1EA;
-              border-color: #0C7C5F;
+              background: #0c7c5f;
+              color: #f2f1ea;
+              border-color: #0c7c5f;
             }
 
             &[title]:hover::after {
@@ -171,7 +179,7 @@ html {
               left: 50%;
               transform: translateX(-50%);
               background: #165151;
-              color: #F2F1EA;
+              color: #f2f1ea;
               font-family: var(--font-body);
               font-size: 0.85em;
               white-space: nowrap;
@@ -357,6 +365,12 @@ html {
           text-transform: uppercase;
           pointer-events: none;
           margin-right: 0.2em;
+
+          &.offline {
+            opacity: 1;
+            font-weight: bold;
+            color: var(--notice-error-background);
+          }
         }
       }
 
@@ -390,7 +404,9 @@ html {
     border-radius: 6px;
     padding: 0.2em 0.6em;
     cursor: pointer;
-    transition: background 0.15s, color 0.15s;
+    transition:
+      background 0.15s,
+      color 0.15s;
 
     &.clear {
       background: none;

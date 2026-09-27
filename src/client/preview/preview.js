@@ -1,11 +1,30 @@
 import { API } from "../utils/api.js";
 import { ErrorNotice } from "../utils/notifications.js";
+import { isConnected, onConnectionChange } from "../utils/connection-state.js";
 
 const restart = document.querySelector(`#preview-buttons .restart`);
 const pause = document.querySelector(`#preview-buttons .pause`);
 const newtab = document.querySelector(`#preview-buttons .newtab`);
 const preview = document.getElementById(`preview`);
-const { projectSlug } = document.body.dataset;
+const previewLabel = document.getElementById(`preview-label`);
+const { projectSlug, useWebsockets } = document.body.dataset;
+
+// Make it obvious when the preview has stopped auto-updating because
+// the file-sync connection dropped, rather than leaving the static
+// "Live preview" label up while nothing is actually happening.
+if (previewLabel && useWebsockets) {
+  const defaultLabel = previewLabel.textContent;
+
+  function reflectConnectionState(connected) {
+    previewLabel.textContent = connected
+      ? defaultLabel
+      : `Disconnected — not updating`;
+    previewLabel.classList.toggle(`offline`, !connected);
+  }
+
+  reflectConnectionState(isConnected());
+  onConnectionChange(reflectConnectionState);
+}
 
 let failures = 0;
 let containerReady = false;

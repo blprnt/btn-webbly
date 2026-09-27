@@ -1,5 +1,5 @@
 import { API } from "../utils/api.js";
-import { ErrorNotice, Warning } from "../utils/notifications.js";
+import { Notice, Warning } from "../utils/notifications.js";
 import { getMimeType } from "./content-types.js";
 import { updatePreview } from "../preview/preview.js";
 
@@ -12,9 +12,10 @@ import { CustomWebsocketInterface } from "./websocket-interface.js";
 import { Rewinder } from "./rewind.js";
 import { handleFileHistory } from "./websocket-interface.js";
 import { supportFileExtension } from "./inject-file-tree-icons.js";
+import { setConnected } from "../utils/connection-state.js";
 
 const RETRY_INTERVAL = 3000;
-const MAX_RETRIES = 5;
+const MAX_RETRY_INTERVAL = 30_000;
 const { useWebsockets } = document.body.dataset;
 
 const { defaultCollapse, defaultFile, projectMember, projectSlug } =
@@ -74,18 +75,34 @@ export async function setupFileTree() {
     let initial;
     let retried = false;
 
-    const url = `wss://${location.host}`;
-    async function connect(retry = 0) {
-      if (retry === MAX_RETRIES) {
-        return setTimeout(
-          () =>
-            new ErrorNotice(
-              `Cannot connect to the server... it might be offline?`,
-            ),
-          RETRY_INTERVAL,
+    // A single, persistent "you're offline" notice, rather than a new
+    // dismissable toast per retry attempt (which is easy to miss/close
+    // and gave no way to tell "still trying" from "gave up").
+    let disconnectedNotice = null;
+
+    function markDisconnected() {
+      setConnected(false);
+      if (!disconnectedNotice) {
+        disconnectedNotice = new Warning(
+          `Not connected to the server — your changes are not being saved. Trying to reconnect…`,
         );
       }
+    }
 
+    function markReconnected(wasDisconnected) {
+      setConnected(true);
+      if (!wasDisconnected) return;
+      disconnectedNotice?.notice?.querySelector(`.close`)?.click();
+      disconnectedNotice = null;
+      new Notice(`Reconnected — resyncing your changes…`, 2000);
+      // Anything edited while we were offline was deliberately never
+      // marked as "saved" (see sync.js), so re-running sync for every
+      // open tab will pick it back up and actually send it now.
+      EditorEntry.getEntries().forEach((entry) => entry.sync());
+    }
+
+    const url = `wss://${location.host}`;
+    async function connect(retry = 0) {
       // Why does it take so bloody long for the websocket
       // connection to get established? What is blocking it?
       const OT = await fileTree.connectViaWebSocket(
@@ -100,17 +117,23 @@ export async function setupFileTree() {
       initial ??= OT;
       if (retried) initial.socket.close();
 
-      // auto-reconnect when we get booted.
+      OT.socket.addEventListener(`open`, () => {
+        if (fileTree.OT === OT) markReconnected(!!disconnectedNotice);
+      });
+
+      // auto-reconnect when we get booted. Retries keep going
+      // indefinitely (with a capped backoff) rather than giving up
+      // after a handful of attempts and leaving the editor stuck
+      // offline until the student thinks to reload the page.
       OT.socket.addEventListener(`close`, () => {
         if (retried && initial === OT) return;
-        setTimeout(() => {
-          if (globalThis.__shutdown) return;
-          new Warning(
-            `No connection to server, trying to connect...`,
-            RETRY_INTERVAL,
-          );
-          connect(retry + 1);
-        }, RETRY_INTERVAL);
+        if (globalThis.__shutdown) return;
+        markDisconnected();
+        const delay = Math.min(
+          RETRY_INTERVAL * 2 ** Math.min(retry, 4),
+          MAX_RETRY_INTERVAL,
+        );
+        setTimeout(() => connect(retry + 1), delay);
       });
 
       return true;
@@ -124,10 +147,6 @@ export async function setupFileTree() {
     ]);
 
     if (success !== true) {
-      new ErrorNotice(
-        `initial connection took longer than a second`,
-        RETRY_INTERVAL,
-      );
       retried = true;
       connect();
     }

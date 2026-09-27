@@ -8,15 +8,17 @@ import { updatePreview } from "../preview/preview.js";
 import { API } from "../utils/api.js";
 import { Rewinder } from "./rewind.js";
 import { ErrorNotice, Notice } from "../utils/notifications.js";
+import { isConnected } from "../utils/connection-state.js";
 
 const { useWebsockets } = document.body.dataset;
 const saveStatus = document.getElementById(`save-status`);
 let saveStatusTimer;
 
-function setSaveStatus(text) {
+function setSaveStatus(text, offline = false) {
   if (!saveStatus) return;
   clearTimeout(saveStatusTimer);
   saveStatus.textContent = text;
+  saveStatus.classList.toggle(`offline`, offline);
   if (text === `Saved`) {
     saveStatusTimer = setTimeout(() => (saveStatus.textContent = ``), 3000);
   }
@@ -49,9 +51,18 @@ export async function syncContent(projectSlug, fileEntry, forced = false) {
 
   // sync via websocket or REST?
   if (useWebsockets) {
-    editorEntry.setContent(newContent);
-    fileEntry.updateContent(`diff`, patch);
-    setSaveStatus(`Saved`);
+    if (isConnected()) {
+      editorEntry.setContent(newContent);
+      fileEntry.updateContent(`diff`, patch);
+      setSaveStatus(`Saved`);
+    } else {
+      // We're not actually connected, so sending this would just be
+      // dropped. Don't claim it's saved, and don't update editorEntry's
+      // stored content either: leaving it stale means this same diff
+      // gets picked up and resent as soon as the connection comes back
+      // (see the reconnect handling in file-tree-utils.js).
+      setSaveStatus(`Not connected — not saved`, true);
+    }
   }
 
   // REST updates require a lot more work.

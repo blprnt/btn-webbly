@@ -247,12 +247,38 @@ function verifyRIFF(bytes) {
   return listEquals(data.substring(0, 4), [82, 73, 70, 6]);
 }
 
+// src/client/utils/connection-state.js
+var connected = false;
+var listeners = /* @__PURE__ */ new Set();
+function setConnected(value) {
+  if (connected === value) return;
+  connected = value;
+  listeners.forEach((fn) => fn(connected));
+}
+function isConnected() {
+  return connected;
+}
+function onConnectionChange(fn) {
+  listeners.add(fn);
+  return () => listeners.delete(fn);
+}
+
 // src/client/preview/preview.js
 var restart = document.querySelector(`#preview-buttons .restart`);
 var pause = document.querySelector(`#preview-buttons .pause`);
 var newtab = document.querySelector(`#preview-buttons .newtab`);
 var preview = document.getElementById(`preview`);
-var { projectSlug } = document.body.dataset;
+var previewLabel = document.getElementById(`preview-label`);
+var { projectSlug, useWebsockets } = document.body.dataset;
+if (previewLabel && useWebsockets) {
+  let reflectConnectionState = function(connected2) {
+    previewLabel.textContent = connected2 ? defaultLabel : `Disconnected \u2014 not updating`;
+    previewLabel.classList.toggle(`offline`, !connected2);
+  };
+  const defaultLabel = previewLabel.textContent;
+  reflectConnectionState(isConnected());
+  onConnectionChange(reflectConnectionState);
+}
 var failures = 0;
 var containerReady = false;
 var updateInProgress = false;
@@ -31024,13 +31050,14 @@ var Rewinder = class _Rewinder {
 };
 
 // src/client/files/sync.js
-var { useWebsockets } = document.body.dataset;
+var { useWebsockets: useWebsockets2 } = document.body.dataset;
 var saveStatus = document.getElementById(`save-status`);
 var saveStatusTimer;
-function setSaveStatus(text) {
+function setSaveStatus(text, offline = false) {
   if (!saveStatus) return;
   clearTimeout(saveStatusTimer);
   saveStatus.textContent = text;
+  saveStatus.classList.toggle(`offline`, offline);
   if (text === `Saved`) {
     saveStatusTimer = setTimeout(() => saveStatus.textContent = ``, 3e3);
   }
@@ -31047,10 +31074,14 @@ async function syncContent(projectSlug6, fileEntry, forced = false) {
   if (newContent === currentContent) return;
   const patch = createPatch(path2, currentContent, newContent);
   setSaveStatus(`Saving\u2026`);
-  if (useWebsockets) {
-    editorEntry.setContent(newContent);
-    fileEntry.updateContent(`diff`, patch);
-    setSaveStatus(`Saved`);
+  if (useWebsockets2) {
+    if (isConnected()) {
+      editorEntry.setContent(newContent);
+      fileEntry.updateContent(`diff`, patch);
+      setSaveStatus(`Saved`);
+    } else {
+      setSaveStatus(`Not connected \u2014 not saved`, true);
+    }
   } else {
     let response;
     try {
@@ -32383,7 +32414,7 @@ var CustomWebsocketInterface = class extends WebSocketInterface {
 };
 
 // src/client/editor/editor-entry.js
-var { projectSlug: projectSlug2, useWebsockets: useWebsockets2 } = document.body.dataset;
+var { projectSlug: projectSlug2, useWebsockets: useWebsockets3 } = document.body.dataset;
 var fileTree2 = document.querySelector(`file-tree`);
 var tabs = document.getElementById(`tabs`);
 var editors = document.getElementById(`editors`);
@@ -32600,7 +32631,7 @@ var EditorEntry = class _EditorEntry {
     const viewURL = `${currentURL}?view=${fileEntry.path}`;
     history.replaceState(null, null, viewURL);
     if (Rewinder.active) {
-      if (useWebsockets2) {
+      if (useWebsockets3) {
         fileTree2.OT?.getFileHistory(fileEntry.path);
       } else {
         const history3 = await API.files.history(projectSlug2, fileEntry.path);
@@ -32702,8 +32733,8 @@ function supportFileExtension(extension) {
 // src/client/files/file-tree-utils.js
 var { getOrCreateFileEditTab } = EditorEntry;
 var RETRY_INTERVAL = 3e3;
-var MAX_RETRIES = 5;
-var { useWebsockets: useWebsockets3 } = document.body.dataset;
+var MAX_RETRY_INTERVAL = 3e4;
+var { useWebsockets: useWebsockets4 } = document.body.dataset;
 var { defaultCollapse, defaultFile, projectMember, projectSlug: projectSlug3 } = document.body.dataset;
 var fileTree4 = document.getElementById(`filetree`);
 var col1 = document.querySelector(`.left.column`);
@@ -32734,19 +32765,27 @@ fileTree4.addEventListener(`tree:ready`, async () => {
 async function setupFileTree() {
   const dirData = await API.files.dir(projectSlug3);
   if (dirData instanceof Error) return;
-  if (useWebsockets3 && projectMember) {
-    let initial;
-    let retried = false;
-    const url = `wss://${location.host}`;
-    async function connect(retry = 0) {
-      if (retry === MAX_RETRIES) {
-        return setTimeout(
-          () => new ErrorNotice(
-            `Cannot connect to the server... it might be offline?`
-          ),
-          RETRY_INTERVAL
+  if (useWebsockets4 && projectMember) {
+    let markDisconnected = function() {
+      setConnected(false);
+      if (!disconnectedNotice) {
+        disconnectedNotice = new Warning(
+          `Not connected to the server \u2014 your changes are not being saved. Trying to reconnect\u2026`
         );
       }
+    }, markReconnected = function(wasDisconnected) {
+      setConnected(true);
+      if (!wasDisconnected) return;
+      disconnectedNotice?.notice?.querySelector(`.close`)?.click();
+      disconnectedNotice = null;
+      new Notice(`Reconnected \u2014 resyncing your changes\u2026`, 2e3);
+      EditorEntry.getEntries().forEach((entry) => entry.sync());
+    };
+    let initial;
+    let retried = false;
+    let disconnectedNotice = null;
+    const url = `wss://${location.host}`;
+    async function connect(retry = 0) {
       const OT = await fileTree4.connectViaWebSocket(
         url,
         projectSlug3,
@@ -32755,16 +32794,18 @@ async function setupFileTree() {
       );
       initial ??= OT;
       if (retried) initial.socket.close();
+      OT.socket.addEventListener(`open`, () => {
+        if (fileTree4.OT === OT) markReconnected(!!disconnectedNotice);
+      });
       OT.socket.addEventListener(`close`, () => {
         if (retried && initial === OT) return;
-        setTimeout(() => {
-          if (globalThis.__shutdown) return;
-          new Warning(
-            `No connection to server, trying to connect...`,
-            RETRY_INTERVAL
-          );
-          connect(retry + 1);
-        }, RETRY_INTERVAL);
+        if (globalThis.__shutdown) return;
+        markDisconnected();
+        const delay = Math.min(
+          RETRY_INTERVAL * 2 ** Math.min(retry, 4),
+          MAX_RETRY_INTERVAL
+        );
+        setTimeout(() => connect(retry + 1), delay);
       });
       return true;
     }
@@ -32773,10 +32814,6 @@ async function setupFileTree() {
       new Promise((resolve) => setTimeout(resolve, 1e3))
     ]);
     if (success !== true) {
-      new ErrorNotice(
-        `initial connection took longer than a second`,
-        RETRY_INTERVAL
-      );
       retried = true;
       connect();
     }
@@ -32813,7 +32850,7 @@ async function addFileClick(fileTree5, projectSlug6) {
     const fileEntry = evt.detail.grant();
     getOrCreateFileEditTab(fileEntry);
     if (Rewinder.active) {
-      if (useWebsockets3) {
+      if (useWebsockets4) {
         fileTree5.OT?.getFileHistory(fileEntry.path);
       } else {
         const history3 = await API.files.history(projectSlug6, fileEntry.path);
@@ -33149,7 +33186,7 @@ var LogView = class {
 
 // src/client/editor/event-handling.js
 var mac2 = navigator.userAgent.includes(`Mac OS`);
-var { projectId, projectSlug: projectSlug5, useWebsockets: useWebsockets4 } = document.body.dataset;
+var { projectId, projectSlug: projectSlug5, useWebsockets: useWebsockets5 } = document.body.dataset;
 var tabs2 = document.getElementById(`tabs`);
 var left = document.getElementById(`left`);
 var right = document.getElementById(`right`);
@@ -33223,7 +33260,7 @@ function enableRewindFunctions() {
           Rewinder.close();
         } else {
           Rewinder.enable();
-          if (useWebsockets4) {
+          if (useWebsockets5) {
             fileTree5.OT?.getFileHistory(path2);
           } else {
             const history3 = await API.files.history(projectSlug5, path2);
